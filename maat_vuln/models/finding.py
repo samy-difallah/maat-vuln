@@ -13,6 +13,9 @@ VulnId = Annotated[
 
 CVE_PATTERN = re.compile(r"CVE-\d{4}-\d{4,}")
 
+CvssVersion = Literal["4.0", "3.1", "3.0", "2.0"]
+CvssScore = Annotated[float, Field(ge=0, le=10)]
+
 
 class Component(BaseModel):
     """Software component a vulnerability was found in."""
@@ -37,8 +40,8 @@ class CvssInput(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    version: Literal["4.0", "3.1", "3.0", "2.0"]
-    base_score: float = Field(ge=0, le=10)
+    version: CvssVersion
+    base_score: CvssScore
     vector: str | None = None
 
 
