@@ -22,7 +22,7 @@ classifiers = [
     "Programming Language :: Python :: 3.14",
     "Topic :: Security",
 ]
-dependencies = []
+dependencies = ["pydantic>=2.14"]
 
 [project.optional-dependencies]
 test = [
@@ -78,7 +78,19 @@ convention = "google"
 "tests/**" = ["ANN"]
 
 [tool.importlinter]
-root_package = "maat_vuln"
+root_packages = ["maat_vuln", "tests"]
+
+# A plain "maat_vuln" source would skip the subpackage's own descendants,
+# hence the wildcard; imports inside the subpackage are allowed.
+[[tool.importlinter.contracts]]
+name = "Import models from maat_vuln.models, not its submodules"
+type = "forbidden"
+source_modules = ["maat_vuln.*", "tests"]
+forbidden_modules = ["maat_vuln.models.finding", "maat_vuln.models.input"]
+ignore_imports = [
+    "maat_vuln.models -> maat_vuln.models.*",
+    "maat_vuln.models.** -> maat_vuln.models.*",
+]
 
 [tool.pytest.ini_options]
 addopts = [
