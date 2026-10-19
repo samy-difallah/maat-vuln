@@ -27,7 +27,7 @@ General rules:
 
 - Every top-level document carries `schema_version` (semver, starting `0.1.0`).
 - Input is tolerant (unknown fields ignored, IDs normalized); output is strict.
-- **Absent field = not computed; `null` = looked up, no result.** Serialize with `exclude_unset` semantics so the distinction survives JSON round-trips.
+- **Absent field = not computed; `null` = looked up, no result.** Such fields default to Pydantic's `MISSING` sentinel, which every dump omits, so the distinction survives JSON round-trips without `exclude_unset`.
 - Timestamps: RFC 3339, UTC. Vulnerability IDs: uppercase.
 
 ### Finding (input)
@@ -50,9 +50,11 @@ Input document: `{"schema_version": ..., "findings": [...]}`. Input being tolera
 
 ### Signals (per vulnerability, from the snapshot)
 
-- **KEV**: `in_kev` (bool), `date_added`, `due_date`, `known_ransomware_campaign_use` (displayed only, not used by the default policy).
+- **KEV**: `in_kev` (bool), `date_added`, `due_date`, `known_ransomware_campaign_use` (displayed only, not used by the default policy); the last three are absent when not in KEV.
 - **EPSS**: `probability`, `percentile`, `model_version`, `score_date`.
-- **CVSS**: list of `{version, vector, base_score, source}` where `source` is `input` or `vulnerability-lookup`, plus the selected one. **Provisional** selection order: 4.0 > 3.1 > 3.0 > 2.0; all values kept; selecting 2.0 adds flag `cvss_legacy`.
+- **CVSS**: `{values, selected}`, where `values` is a non-empty list of `{version, vector, base_score, source}` (`source` is `input` or `vulnerability-lookup`) and `selected` the one the policy uses. **Provisional** selection order: 4.0 > 3.1 > 3.0 > 2.0; all values kept; selecting 2.0 adds flag `cvss_legacy`.
+
+Signals object: `{kev, epss, cvss}`. `epss` and `cvss` are `null` when the vulnerability is not in the feed or has no CVSS; any of the three is absent when not computed (no CVE pivot, failed CVSS lookup).
 
 ### Snapshot
 
@@ -73,14 +75,14 @@ Commands reuse the latest snapshot unless told to refresh or given a specific on
 | `priority` | `P1`–`P4` or `null` (unscored) |
 | `rule_id` | see §4 |
 | `flags` | list, see §4 |
-| `explanation` | structured: rule, thresholds, input values used |
+| `explanation` | `rule` (condition text), `thresholds` (name → value), `signals` (the Signals object used) |
 | `suppressed_by` | reserved for VEX support (see roadmap); absent until then |
 | `policy_id`, `policy_version` | `maat-default`, `1` |
 | `snapshot_id` | |
 
 ### Report (output)
 
-`schema_version`, `generated_at`, `maat_version`, `policy` (id, version), `snapshot_id`, `decisions` (sorted, §4), `summary` (count per priority).
+`schema_version`, `generated_at`, `maat_version`, `policy` (id, version), `snapshot_id`, `decisions` (sorted, §4), `summary` (count per priority, every key always present: `{"P1", "P2", "P3", "P4", "unscored"}`).
 
 ## 4. Default policy `maat-default` v1
 

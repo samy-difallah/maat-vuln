@@ -86,7 +86,12 @@ root_packages = ["maat_vuln", "tests"]
 name = "Import models from maat_vuln.models, not its submodules"
 type = "forbidden"
 source_modules = ["maat_vuln.*", "tests"]
-forbidden_modules = ["maat_vuln.models.finding", "maat_vuln.models.input"]
+forbidden_modules = [
+    "maat_vuln.models.finding",
+    "maat_vuln.models.input",
+    "maat_vuln.models.report",
+    "maat_vuln.models.signals",
+]
 ignore_imports = [
     "maat_vuln.models -> maat_vuln.models.*",
     "maat_vuln.models.** -> maat_vuln.models.*",
