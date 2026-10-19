@@ -34,15 +34,19 @@ General rules:
 
 | Field | Type | Notes |
 |---|---|---|
-| `id` | str | required; normalized to uppercase |
-| `aliases` | list[str] | optional; normalized, deduplicated |
+| `id` | str | required; normalized to uppercase; replaced by the pivot after validation |
+| `aliases` | list[str] | optional; normalized, deduplicated, sorted; holds every ID but the pivot |
 | `component` | Component \| None | **Provisional:** optional, to allow bare IDs |
 | `cvss` | list[CvssInput] | optional; CVSS supplied by the input |
-| `source` | Provenance | optional: tool, tool_version, original_id |
+| `sources` | list[Provenance] | optional; each: tool, tool_version, original_id |
 
-Component: `purl` (preferred), `bom_ref`, `name`, `version`. A finding's key is `(pivot_id, component.purl or bom_ref or name@version or none)`. Findings with the same key are merged (aliases and sources unioned).
+Pivot: the `id` when it is a CVE; otherwise the lowest CVE alias, compared by year then number; otherwise the `id` itself.
 
-CvssInput: `version` (`4.0`, `3.1`, `3.0`, `2.0`), `vector`, `base_score`.
+Component: `purl` (preferred), `bom_ref`, `name`, `version`. A finding's key is `(pivot_id, component.purl or bom_ref or name@version or name or none)`, serialized in JSON as an object `{"id": ..., "component": ...}`. Findings with the same key are merged in first-seen order: aliases, CVSS values and sources are unioned, the first component is kept.
+
+CvssInput: `version` (`4.0`, `3.1`, `3.0`, `2.0`) and `base_score` (0–10) required, `vector` optional.
+
+Input document: `{"schema_version": ..., "findings": [...]}`. Input being tolerant, `schema_version` is optional; when present, its major version must match Maât's.
 
 ### Signals (per vulnerability, from the snapshot)
 

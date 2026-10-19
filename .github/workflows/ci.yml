@@ -38,7 +38,7 @@ jobs:
           cache: pip
           cache-dependency-path: pyproject.toml
       - run: pip install -e ".[test]"
-      - run: pytest || test $? -eq 5
+      - run: pytest
 
   test:
     if: always()
