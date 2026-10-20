@@ -12,7 +12,9 @@ from maat_vuln.models.signals import OutputModel, Signals
 
 Priority = Literal["P1", "P2", "P3", "P4"]
 
-SnapshotId = Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
+SHA256_PATTERN = r"^[0-9a-f]{64}$"
+
+SnapshotId = Annotated[str, Field(pattern=SHA256_PATTERN)]
 
 UtcDatetime = Annotated[
     AwareDatetime, AfterValidator(lambda value: value.astimezone(UTC))
