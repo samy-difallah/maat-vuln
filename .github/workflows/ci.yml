@@ -23,6 +23,7 @@ jobs:
       - run: ruff check
       - run: ruff format --check
       - run: lint-imports
+      - run: python scripts/generate_schemas.py --check
 
   test-matrix:
     runs-on: ubuntu-latest

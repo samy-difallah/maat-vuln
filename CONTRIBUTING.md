@@ -26,10 +26,13 @@ Run these before pushing; CI runs the same ones:
 ruff check
 ruff format --check
 lint-imports
+python scripts/generate_schemas.py --check
 pytest
 ```
 
-The pre-commit hooks mirror the CI `lint` job (`ruff check`, `ruff format --check`, `lint-imports`) and validate commit messages. `pytest` is left to CI. When a check is added to the CI `lint` job, it is added to pre-commit in the same commit.
+The pre-commit hooks mirror the CI `lint` job (`ruff check`, `ruff format --check`, `lint-imports`, schema drift check) and validate commit messages. `pytest` is left to CI. When a check is added to the CI `lint` job, it is added to pre-commit in the same commit.
+
+The JSON Schemas in `schemas/` are generated from the Pydantic models and committed: after changing a model, regenerate them with `python scripts/generate_schemas.py` and commit them with the change.
 
 ## Branches
 

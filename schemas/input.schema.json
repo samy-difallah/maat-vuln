@@ -1,0 +1,221 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "Component": {
+      "description": "Software component a vulnerability was found in.",
+      "properties": {
+        "purl": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Purl"
+        },
+        "bom_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Bom Ref"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Name"
+        },
+        "version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Version"
+        }
+      },
+      "title": "Component",
+      "type": "object"
+    },
+    "CvssInput": {
+      "description": "CVSS value supplied by the input.",
+      "properties": {
+        "version": {
+          "enum": [
+            "4.0",
+            "3.1",
+            "3.0",
+            "2.0"
+          ],
+          "title": "Version",
+          "type": "string"
+        },
+        "base_score": {
+          "maximum": 10,
+          "minimum": 0,
+          "title": "Base Score",
+          "type": "number"
+        },
+        "vector": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Vector"
+        }
+      },
+      "required": [
+        "version",
+        "base_score"
+      ],
+      "title": "CvssInput",
+      "type": "object"
+    },
+    "Finding": {
+      "description": "Vulnerability reported on a component, as given in the input.\n\nAfter validation, ``id`` is the pivot ID (a CVE whenever one is known)\nand ``aliases`` holds every other ID, sorted and deduplicated.",
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "aliases": {
+          "default": [],
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Aliases",
+          "type": "array"
+        },
+        "component": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Component"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "cvss": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/CvssInput"
+          },
+          "title": "Cvss",
+          "type": "array"
+        },
+        "sources": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Provenance"
+          },
+          "title": "Sources",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "Finding",
+      "type": "object"
+    },
+    "Provenance": {
+      "description": "Tool that reported a finding.",
+      "properties": {
+        "tool": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tool"
+        },
+        "tool_version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tool Version"
+        },
+        "original_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Original Id"
+        }
+      },
+      "title": "Provenance",
+      "type": "object"
+    }
+  },
+  "description": "Top-level input document: a list of findings.",
+  "properties": {
+    "schema_version": {
+      "anyOf": [
+        {
+          "pattern": "^\\d+\\.\\d+\\.\\d+$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Schema Version"
+    },
+    "findings": {
+      "items": {
+        "$ref": "#/$defs/Finding"
+      },
+      "title": "Findings",
+      "type": "array"
+    }
+  },
+  "required": [
+    "findings"
+  ],
+  "title": "FindingsInput",
+  "type": "object"
+}
