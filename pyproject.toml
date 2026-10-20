@@ -97,6 +97,13 @@ ignore_imports = [
     "maat_vuln.models.** -> maat_vuln.models.*",
 ]
 
+[[tool.importlinter.contracts]]
+name = "Import policy from maat_vuln.policy, not its submodules"
+type = "forbidden"
+source_modules = ["maat_vuln.*", "tests"]
+forbidden_modules = ["maat_vuln.policy.default"]
+ignore_imports = ["maat_vuln.policy -> maat_vuln.policy.*"]
+
 [tool.pytest.ini_options]
 addopts = [
     "--import-mode=importlib",
