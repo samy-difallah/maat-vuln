@@ -27,7 +27,7 @@ The design (data contract, default policy, roadmap) is the reference for every d
 - `tests/` mirrors the package structure. No `__init__.py` in `tests/` or its subdirectories. Each test directory has its own `conftest.py` when it needs fixtures.
 - Each subpackage's `__init__.py` re-exports its public symbols via `__all__` (e.g. `models/__init__.py` re-exports `Finding`, `Decision`). Code outside that subpackage imports from the subpackage itself (`from maat_vuln.models import Finding`), never by reaching into the submodule directly (`from maat_vuln.models.finding import Finding`). Cross-imports within the same subpackage may use the direct submodule path.
 - This convention is enforced by `import-linter` (`[tool.importlinter]` in pyproject.toml, run via `lint-imports`): one `forbidden` contract per subpackage bars every *other* subpackage (and `tests/`) from importing its submodules directly. Whenever a new submodule with public exports is created, add it to the relevant contract's `forbidden_modules` list in the same commit — otherwise the rule silently does not cover it.
-- JSON Schemas generated from the Pydantic models live in `schemas/` and are committed; CI fails if they drift from the models.
+- JSON Schemas generated from the Pydantic models live in `schemas/` and are committed; CI fails if they drift from the models. Regenerate them with `python scripts/generate_schemas.py`.
 
 ## Code style
 
