@@ -11,25 +11,30 @@ from maat_vuln.models.finding import (
 )
 from maat_vuln.models.input import SCHEMA_VERSION, FindingsInput
 from maat_vuln.models.report import (
+    SHA256_PATTERN,
     Decision,
     Explanation,
     Flag,
     PolicyRef,
     Priority,
     Report,
+    SnapshotId,
     Summary,
+    UtcDatetime,
 )
 from maat_vuln.models.signals import (
     CvssSignal,
     CvssValue,
     EpssSignal,
     KevSignal,
+    OutputModel,
     Signals,
 )
 
 __all__ = [
     "CVE_PATTERN",
     "SCHEMA_VERSION",
+    "SHA256_PATTERN",
     "Component",
     "CvssInput",
     "CvssSignal",
@@ -42,11 +47,14 @@ __all__ = [
     "FindingsInput",
     "Flag",
     "KevSignal",
+    "OutputModel",
     "PolicyRef",
     "Priority",
     "Provenance",
     "Report",
     "Signals",
+    "SnapshotId",
     "Summary",
+    "UtcDatetime",
     "merge_findings",
 ]

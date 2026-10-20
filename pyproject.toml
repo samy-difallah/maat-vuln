@@ -22,7 +22,7 @@ classifiers = [
     "Programming Language :: Python :: 3.14",
     "Topic :: Security",
 ]
-dependencies = ["pydantic>=2.14"]
+dependencies = ["platformdirs>=4.13", "pydantic>=2.14"]
 
 [project.optional-dependencies]
 test = [
@@ -103,6 +103,13 @@ type = "forbidden"
 source_modules = ["maat_vuln.*", "tests"]
 forbidden_modules = ["maat_vuln.policy.default"]
 ignore_imports = ["maat_vuln.policy -> maat_vuln.policy.*"]
+
+[[tool.importlinter.contracts]]
+name = "Import snapshot from maat_vuln.snapshot, not its submodules"
+type = "forbidden"
+source_modules = ["maat_vuln.*", "tests"]
+forbidden_modules = ["maat_vuln.snapshot.store"]
+ignore_imports = ["maat_vuln.snapshot -> maat_vuln.snapshot.*"]
 
 [tool.pytest.ini_options]
 addopts = [
