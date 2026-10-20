@@ -58,14 +58,15 @@ Signals object: `{kev, epss, cvss}`. `epss` and `cvss` are `null` when the vulne
 
 ### Snapshot
 
-A directory in the user cache (platformdirs) containing the raw feed files and a `manifest.json`:
+A directory `snapshots/<snapshot_id>/` in the user cache (platformdirs) containing the raw feed files and a `manifest.json`:
 
-- `snapshot_id`: SHA-256 of the canonical manifest.
+- `snapshot_id`: SHA-256 of the canonical manifest, i.e. the manifest without `snapshot_id`, serialized as JSON with sorted keys, no whitespace, UTF-8.
 - `created_at`.
-- per feed: name, URL used, `retrieved_at`, SHA-256 of the raw file, feed version info (KEV catalog version / date released; EPSS model version and score date).
-- KEV and EPSS are stored as full feed files (not per-CVE API answers), so a snapshot is self-contained. CVSS lookups are per CVE and appended to the snapshot as they happen.
+- `feeds`, sorted by name; per feed: `name`, `url` (the URL used), `filename` (raw file in the snapshot directory), `retrieved_at`, `sha256` of the raw file, `version`: a string map of the feed version info (KEV catalog version / date released; EPSS model version and score date).
+- KEV and EPSS are stored as full feed files (not per-CVE API answers), so a snapshot is self-contained. The manifest lists only these files, so the ID never changes once the snapshot is written.
+- CVSS lookups are per CVE and appended to the snapshot as they happen, in a file beside the manifest and outside the hash. Cached values are only added, never rewritten, so a report keeps reproducing against its snapshot as it grows.
 
-Commands reuse the latest snapshot unless told to refresh or given a specific one.
+A snapshot is written to a temporary directory, renamed once complete. Loading one checks that its manifest still hashes to its ID. Commands reuse the latest snapshot (newest `created_at`) unless told to refresh or given a specific one.
 
 ### Decision (output, one per finding)
 
