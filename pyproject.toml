@@ -22,7 +22,11 @@ classifiers = [
     "Programming Language :: Python :: 3.14",
     "Topic :: Security",
 ]
-dependencies = ["platformdirs>=4.13", "pydantic>=2.14"]
+dependencies = [
+    "httpx>=0.28",
+    "platformdirs>=4.13",
+    "pydantic>=2.14",
+]
 
 [project.optional-dependencies]
 test = [
