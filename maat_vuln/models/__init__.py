@@ -1,6 +1,7 @@
 """Data contract: input findings and output report."""
 
 from maat_vuln.models.finding import (
+    CVE_PATTERN,
     Component,
     CvssInput,
     Finding,
@@ -27,6 +28,7 @@ from maat_vuln.models.signals import (
 )
 
 __all__ = [
+    "CVE_PATTERN",
     "SCHEMA_VERSION",
     "Component",
     "CvssInput",

@@ -52,7 +52,7 @@ Input document: `{"schema_version": ..., "findings": [...]}`. Input being tolera
 
 - **KEV**: `in_kev` (bool), `date_added`, `due_date`, `known_ransomware_campaign_use` (displayed only, not used by the default policy); the last three are absent when not in KEV.
 - **EPSS**: `probability`, `percentile`, `model_version`, `score_date`.
-- **CVSS**: `{values, selected}`, where `values` is a non-empty list of `{version, vector, base_score, source}` (`source` is `input` or `vulnerability-lookup`) and `selected` the one the policy uses. **Provisional** selection order: 4.0 > 3.1 > 3.0 > 2.0; all values kept; selecting 2.0 adds flag `cvss_legacy`.
+- **CVSS**: `{values, selected}`, where `values` is a non-empty list of `{version, vector, base_score, source}` (`source` is `input` or `vulnerability-lookup`) and `selected` the one the policy uses. **Provisional** selection order: 4.0 > 3.1 > 3.0 > 2.0, then the highest base score within a version, then the first one seen; all values kept; selecting 2.0 adds flag `cvss_legacy`.
 
 Signals object: `{kev, epss, cvss}`. `epss` and `cvss` are `null` when the vulnerability is not in the feed or has no CVSS; any of the three is absent when not computed (no CVE pivot, failed CVSS lookup).
 
@@ -103,7 +103,9 @@ Principles:
 
 - Thresholds use the raw EPSS **probability**, not the percentile (the percentile shifts with the score distribution; it is displayed only).
 - **Missing data never lowers a priority; it adds a flag.** If CVSS is missing, the P2 cap does not apply.
-- Flags: `cvss_missing`, `cvss_lookup_failed` (see §6), `epss_missing`, `cvss_legacy`, `unresolved_id` (no CVE pivot), `unscored`.
+- A signal is available when the vulnerability is in KEV, has an EPSS probability or has a CVSS value; `in_kev: false` alone is not a signal, so a CVE with nothing else is unscored.
+- Flags, one per missing signal, listed in this order: `cvss_missing` (no CVSS, for any reason but a failed lookup), `cvss_lookup_failed` (CVSS absent on a CVE pivot, see §6), `epss_missing` (EPSS `null` or absent), `cvss_legacy` (selected CVSS is 2.0), `unresolved_id` (no CVE pivot), `unscored` (no priority).
+- `explanation.thresholds` holds the thresholds of the matched rule, keyed by their constant names (`EPSS_LIKELY`, …).
 
 Sort order of decisions: priority (P1 → P4, unscored last), then EPSS probability descending, then selected CVSS base score descending, then finding key ascending.
 
