@@ -7,15 +7,20 @@ from datetime import UTC, datetime
 import pytest
 from pydantic import ValidationError
 
+from maat_vuln.models import CvssValue
 from maat_vuln.snapshot import (
+    CVSS_CACHE_NAME,
     MANIFEST_NAME,
+    CvssEntry,
     RawFeed,
     SnapshotError,
+    append_cvss,
     compute_snapshot_id,
     create_snapshot,
     default_root,
     latest_snapshot,
     load_snapshot,
+    read_cvss,
 )
 
 RETRIEVED_AT = datetime(2026, 10, 20, 12, tzinfo=UTC)
@@ -78,10 +83,11 @@ def test_load_round_trip(tmp_path):
         [raw_feed("kev", "a.json"), raw_feed("kev", "b.json")],
         [raw_feed("kev", "a.json"), raw_feed("epss", "a.json")],
         [raw_feed("kev", MANIFEST_NAME)],
+        [raw_feed("kev", CVSS_CACHE_NAME)],
     ],
 )
 def test_create_rejects_clashing_feeds(tmp_path, feeds):
-    """Feed names and file names are unique and spare the manifest."""
+    """Feed names and file names are unique and spare reserved names."""
     with pytest.raises(SnapshotError):
         create_snapshot(feeds, root=tmp_path)
     assert not tmp_path.exists() or not any(tmp_path.iterdir())
@@ -140,3 +146,57 @@ def test_default_root_in_user_cache():
     root = default_root()
     assert root.name == "snapshots"
     assert "maat-vuln" in root.parts
+
+
+def cvss_entry(cve, score=None):
+    """Build a CVSS lookup entry; no score means no result."""
+    values = None
+    if score is not None:
+        values = [
+            CvssValue(
+                version="3.1",
+                base_score=score,
+                vector=None,
+                source="vulnerability-lookup",
+            )
+        ]
+    return CvssEntry(id=cve, retrieved_at=RETRIEVED_AT, values=values)
+
+
+def test_cvss_cache_round_trip(tmp_path):
+    """Appended lookups, with or without result, are read back."""
+    snapshot = create_snapshot(FEEDS, root=tmp_path)
+    assert read_cvss(snapshot) == {}
+    first = [cvss_entry("CVE-2024-0001", 9.8)]
+    second = [cvss_entry("CVE-2024-0002")]
+    append_cvss(snapshot, first)
+    append_cvss(snapshot, second)
+    assert read_cvss(snapshot) == {
+        "CVE-2024-0001": first[0],
+        "CVE-2024-0002": second[0],
+    }
+    assert load_snapshot(snapshot.manifest.snapshot_id, root=tmp_path)
+
+
+def test_cvss_cache_first_entry_wins(tmp_path):
+    """A later lookup of a cached CVE never replaces the first one."""
+    snapshot = create_snapshot(FEEDS, root=tmp_path)
+    append_cvss(snapshot, [cvss_entry("CVE-2024-0001", 9.8)])
+    append_cvss(snapshot, [cvss_entry("CVE-2024-0001", 5.0)])
+    cached = read_cvss(snapshot)["CVE-2024-0001"]
+    assert cached == cvss_entry("CVE-2024-0001", 9.8)
+
+
+def test_cvss_cache_skips_torn_lines(tmp_path):
+    """A line cut short by an interrupted write is ignored."""
+    snapshot = create_snapshot(FEEDS, root=tmp_path)
+    append_cvss(snapshot, [cvss_entry("CVE-2024-0001", 9.8)])
+    with (snapshot.path / CVSS_CACHE_NAME).open("a") as cache:
+        cache.write('{"id": "CVE-2024-0002", "retr\n')
+    assert list(read_cvss(snapshot)) == ["CVE-2024-0001"]
+
+
+def test_cvss_entry_needs_values_or_none():
+    """An empty list is not a result: no result is ``None``."""
+    with pytest.raises(ValidationError):
+        CvssEntry(id="CVE-2024-0001", retrieved_at=RETRIEVED_AT, values=[])
