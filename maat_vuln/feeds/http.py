@@ -14,6 +14,7 @@ from types import TracebackType
 from typing import Self
 
 import httpx
+from pydantic import JsonValue
 
 USER_AGENT = f"maat-vuln/{version('maat-vuln')}"
 DEFAULT_CONCURRENCY = 8
@@ -88,6 +89,29 @@ class HttpClient:
     ) -> httpx.Response:
         """Send a GET request, retrying transient failures.
 
+        Raises:
+            FetchError: the last attempt still failed.
+        """
+        return await self._send("GET", url, params=params)
+
+    async def post(self, url: str, json: JsonValue) -> httpx.Response:
+        """Send a POST request with a JSON body, retrying failures.
+
+        Raises:
+            FetchError: the last attempt still failed.
+        """
+        return await self._send("POST", url, json=json)
+
+    async def _send(
+        self,
+        method: str,
+        url: str,
+        *,
+        params: dict[str, str] | None = None,
+        json: JsonValue = None,
+    ) -> httpx.Response:
+        """Send a request, retrying transient failures.
+
         Transport errors, HTTP 429 and 5xx are retried; any other
         response is returned as is, for the caller to interpret.
 
@@ -103,7 +127,9 @@ class HttpClient:
             try:
                 # Released before sleeping, so a backoff blocks no one.
                 async with semaphore:
-                    response = await self._client.get(url, params=params)
+                    response = await self._client.request(
+                        method, url, params=params, json=json
+                    )
             except httpx.TransportError as error:
                 failure = error
             else:

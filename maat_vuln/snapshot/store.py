@@ -2,7 +2,8 @@
 
 A snapshot is a directory named after its ID, holding the raw feed files
 and ``manifest.json``. The manifest only lists full feed files, so the
-ID never changes once the snapshot is written.
+ID never changes once the snapshot is written. CVSS lookups are appended
+beside it, in ``cvss.jsonl``, outside the hash.
 """
 
 import hashlib
@@ -20,14 +21,17 @@ from pydantic import Field, ValidationError
 
 from maat_vuln.models import (
     SHA256_PATTERN,
+    CvssValue,
     OutputModel,
     SnapshotId,
     UtcDatetime,
+    VulnId,
 )
 
 APP_NAME = "maat-vuln"
 SNAPSHOTS_DIR = "snapshots"
 MANIFEST_NAME = "manifest.json"
+CVSS_CACHE_NAME = "cvss.jsonl"
 TMP_PREFIX = ".tmp-"
 
 # No separator and no leading dot: a feed file stays inside its snapshot.
@@ -72,6 +76,14 @@ class Manifest(ManifestContent):
     """Content of ``manifest.json``."""
 
     snapshot_id: SnapshotId
+
+
+class CvssEntry(OutputModel):
+    """CVSS lookup of one CVE; ``values`` is ``None`` for no result."""
+
+    id: VulnId
+    retrieved_at: UtcDatetime
+    values: Annotated[list[CvssValue], Field(min_length=1)] | None
 
 
 @dataclass(frozen=True)
@@ -127,8 +139,9 @@ def create_snapshot(
     filenames = {record.filename for record in records}
     if len(names) != len(records) or len(filenames) != len(records):
         raise SnapshotError("feed names and file names must be unique")
-    if MANIFEST_NAME in filenames:
-        raise SnapshotError(f"a feed file cannot be named {MANIFEST_NAME}")
+    reserved = filenames & {MANIFEST_NAME, CVSS_CACHE_NAME}
+    if reserved:
+        raise SnapshotError(f"a feed file cannot be named {min(reserved)}")
     content = ManifestContent(created_at=datetime.now(UTC), feeds=records)
     manifest = Manifest(
         **dict(content), snapshot_id=compute_snapshot_id(content)
@@ -185,3 +198,29 @@ def latest_snapshot(root: Path | None = None) -> Snapshot | None:
         key=lambda snapshot: snapshot.manifest.created_at,
         default=None,
     )
+
+
+def append_cvss(snapshot: Snapshot, entries: list[CvssEntry]) -> None:
+    """Append CVSS lookups to the snapshot cache, one JSON line each."""
+    with (snapshot.path / CVSS_CACHE_NAME).open("a", encoding="utf-8") as f:
+        f.write("".join(entry.model_dump_json() + "\n" for entry in entries))
+
+
+def read_cvss(snapshot: Snapshot) -> dict[str, CvssEntry]:
+    """Map each CVE looked up in the snapshot to its cached CVSS.
+
+    The first entry of a CVE wins, so a report made against the snapshot
+    keeps reproducing whatever is appended later.
+    """
+    path = snapshot.path / CVSS_CACHE_NAME
+    if not path.is_file():
+        return {}
+    entries: dict[str, CvssEntry] = {}
+    for line in path.read_text(encoding="utf-8").splitlines():
+        try:
+            entry = CvssEntry.model_validate_json(line)
+        except ValidationError:
+            # A write cut short: the CVE is simply looked up again.
+            continue
+        entries.setdefault(entry.id, entry)
+    return entries

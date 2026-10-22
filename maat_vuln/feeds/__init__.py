@@ -1,5 +1,10 @@
 """Feeds: clients for the sources signals come from."""
 
+from maat_vuln.feeds.cvss import (
+    CVSS_BATCH_SIZE,
+    CVSS_LOOKUP_URL,
+    lookup_cvss,
+)
 from maat_vuln.feeds.epss import (
     EPSS_FEED_NAME,
     EPSS_FILENAME,
@@ -27,6 +32,8 @@ from maat_vuln.feeds.kev import (
 
 __all__ = [
     "CONNECT_TIMEOUT",
+    "CVSS_BATCH_SIZE",
+    "CVSS_LOOKUP_URL",
     "DEFAULT_CONCURRENCY",
     "EPSS_FEED_NAME",
     "EPSS_FILENAME",
@@ -42,6 +49,7 @@ __all__ = [
     "HttpClient",
     "fetch_epss",
     "fetch_kev",
+    "lookup_cvss",
     "parse_epss",
     "parse_kev",
 ]

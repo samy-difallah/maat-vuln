@@ -1,0 +1,189 @@
+{
+  "metadata": {
+    "requested": 8,
+    "found": 6
+  },
+  "data": [
+    {
+      "id": "CVE-2016-0800",
+      "vulnerability": {
+        "cveMetadata": {
+          "cveId": "CVE-2016-0800"
+        },
+        "containers": {
+          "cna": {
+            "metrics": []
+          },
+          "adp": [
+            {
+              "metrics": []
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "fkie_cve-2016-0800",
+      "vulnerability": {
+        "id": "CVE-2016-0800",
+        "metrics": {
+          "cvssMetricV30": [
+            {
+              "source": "nvd@nist.gov",
+              "type": "Primary",
+              "cvssData": {
+                "version": "3.0",
+                "baseScore": 5.9,
+                "vectorString": "CVSS:3.0/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:N/A:N"
+              }
+            }
+          ],
+          "cvssMetricV2": [
+            {
+              "source": "nvd@nist.gov",
+              "type": "Primary",
+              "cvssData": {
+                "version": "2.0",
+                "baseScore": 4.3,
+                "vectorString": "AV:N/AC:M/Au:N/C:P/I:N/A:N"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "CVE-2021-44228",
+      "vulnerability": {
+        "cveMetadata": {
+          "cveId": "CVE-2021-44228"
+        },
+        "containers": {
+          "cna": {
+            "metrics": []
+          },
+          "adp": [
+            {
+              "metrics": []
+            },
+            {
+              "metrics": [
+                {
+                  "cvssV3_1": {
+                    "version": "3.1",
+                    "baseScore": 10,
+                    "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "fkie_cve-2021-44228",
+      "vulnerability": {
+        "id": "CVE-2021-44228",
+        "metrics": {
+          "cvssMetricV31": [
+            {
+              "source": "nvd@nist.gov",
+              "type": "Primary",
+              "cvssData": {
+                "version": "3.1",
+                "baseScore": 10.0,
+                "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H"
+              }
+            },
+            {
+              "source": "134c704f-9b21-4f2e-91b3-4a467353bcc0",
+              "type": "Secondary",
+              "cvssData": {
+                "version": "3.1",
+                "baseScore": 10.0,
+                "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H"
+              }
+            }
+          ],
+          "cvssMetricV2": [
+            {
+              "source": "nvd@nist.gov",
+              "type": "Primary",
+              "cvssData": {
+                "version": "2.0",
+                "baseScore": 9.3,
+                "vectorString": "AV:N/AC:M/Au:N/C:C/I:C/A:C"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "CVE-2024-3094",
+      "vulnerability": {
+        "cveMetadata": {
+          "cveId": "CVE-2024-3094"
+        },
+        "containers": {
+          "cna": {
+            "metrics": [
+              {
+                "cvssV3_1": {
+                  "version": "3.1",
+                  "baseScore": 10,
+                  "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H"
+                }
+              }
+            ]
+          },
+          "adp": [
+            {
+              "metrics": []
+            },
+            {
+              "metrics": []
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "fkie_cve-2024-3094",
+      "vulnerability": {
+        "id": "CVE-2024-3094",
+        "metrics": {
+          "cvssMetricV31": [
+            {
+              "source": "secalert@redhat.com",
+              "type": "Secondary",
+              "cvssData": {
+                "version": "3.1",
+                "baseScore": 10.0,
+                "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H"
+              }
+            },
+            {
+              "source": "nvd@nist.gov",
+              "type": "Primary",
+              "cvssData": {
+                "version": "3.1",
+                "baseScore": 10.0,
+                "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "CVE-2099-0001",
+      "vulnerability": null
+    },
+    {
+      "id": "fkie_cve-2099-0001",
+      "vulnerability": null
+    }
+  ]
+}
