@@ -136,7 +136,7 @@ KEV and EPSS are fetched as full feed files, one request each. The only per-vuln
 - **Retries**: exponential backoff with jitter on transport errors, HTTP 429 and 5xx; honor `Retry-After`; give up after a bounded number of attempts without failing the whole run. A failed lookup is not a `null` (no result): the CVSS field stays absent, the finding gets the `cvss_lookup_failed` flag, and the failure is not cached in the snapshot, so a later run retries it.
 - **Identification**: every request sends `User-Agent: maat-vuln/<version>`.
 - **Cache first**: values already in the snapshot are never requested again.
-- **Bulk access first**: before implementing per-CVE lookups, check whether Vulnerability-Lookup offers a batch endpoint or downloadable dumps; prefer them when they exist.
+- **Bulk access first**: before implementing per-CVE lookups, check whether Vulnerability-Lookup offers a batch endpoint or downloadable dumps; prefer them when they exist. It does: CVSS is looked up through its bulk endpoint (`POST /api/vulnerability/bulk`, at most 100 IDs per request), reading for each CVE both its CVE record (`CVE-…`: CNA and ADP metrics) and its NVD record (`fkie_cve-…`), so 50 CVEs per request. Every value of both records is kept, exact duplicates once; a failed request fails the lookup of its whole batch.
 - The CLI stays synchronous and calls the sync facade.
 
 ## 7. Roadmap

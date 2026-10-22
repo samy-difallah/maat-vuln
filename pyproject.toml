@@ -120,6 +120,7 @@ name = "Import feeds from maat_vuln.feeds, not its submodules"
 type = "forbidden"
 source_modules = ["maat_vuln.*", "tests"]
 forbidden_modules = [
+    "maat_vuln.feeds.cvss",
     "maat_vuln.feeds.epss",
     "maat_vuln.feeds.http",
     "maat_vuln.feeds.kev",
