@@ -1,6 +1,7 @@
 """Tests for the shared HTTP client."""
 
 import asyncio
+import json
 import random
 from datetime import UTC, datetime, timedelta
 from email.utils import format_datetime
@@ -152,3 +153,16 @@ def test_concurrency_must_be_positive():
     """A zero cap would block every request forever."""
     with pytest.raises(ValueError, match="concurrency"):
         HttpClient(concurrency=0)
+
+
+async def test_post_sends_json_and_retries(respx_mock, delays):
+    """A POST carries its JSON body and is retried like a GET."""
+    route = respx_mock.post(URL)
+    route.side_effect = [httpx.Response(503), httpx.Response(200)]
+    async with HttpClient() as client:
+        response = await client.post(URL, json={"ids": ["CVE-2024-0001"]})
+    assert response.status_code == httpx.codes.OK
+    assert delays == [0.5]
+    assert json.loads(route.calls.last.request.content) == {
+        "ids": ["CVE-2024-0001"]
+    }
