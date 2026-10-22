@@ -1,5 +1,12 @@
 """Feeds: clients for the sources signals come from."""
 
+from maat_vuln.feeds.epss import (
+    EPSS_FEED_NAME,
+    EPSS_FILENAME,
+    EPSS_URL,
+    fetch_epss,
+    parse_epss,
+)
 from maat_vuln.feeds.http import (
     CONNECT_TIMEOUT,
     DEFAULT_CONCURRENCY,
@@ -21,6 +28,9 @@ from maat_vuln.feeds.kev import (
 __all__ = [
     "CONNECT_TIMEOUT",
     "DEFAULT_CONCURRENCY",
+    "EPSS_FEED_NAME",
+    "EPSS_FILENAME",
+    "EPSS_URL",
     "KEV_FEED_NAME",
     "KEV_FILENAME",
     "KEV_URL",
@@ -30,6 +40,8 @@ __all__ = [
     "USER_AGENT",
     "FetchError",
     "HttpClient",
+    "fetch_epss",
     "fetch_kev",
+    "parse_epss",
     "parse_kev",
 ]

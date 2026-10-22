@@ -29,6 +29,7 @@ from maat_vuln.models.signals import (
     EpssSignal,
     KevSignal,
     OutputModel,
+    Probability,
     Signals,
 )
 
@@ -51,6 +52,7 @@ __all__ = [
     "OutputModel",
     "PolicyRef",
     "Priority",
+    "Probability",
     "Provenance",
     "Report",
     "Signals",
