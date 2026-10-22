@@ -119,7 +119,7 @@ ignore_imports = ["maat_vuln.snapshot -> maat_vuln.snapshot.*"]
 name = "Import feeds from maat_vuln.feeds, not its submodules"
 type = "forbidden"
 source_modules = ["maat_vuln.*", "tests"]
-forbidden_modules = ["maat_vuln.feeds.http"]
+forbidden_modules = ["maat_vuln.feeds.http", "maat_vuln.feeds.kev"]
 ignore_imports = ["maat_vuln.feeds -> maat_vuln.feeds.*"]
 
 [tool.pytest.ini_options]

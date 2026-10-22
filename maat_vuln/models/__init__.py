@@ -7,6 +7,7 @@ from maat_vuln.models.finding import (
     Finding,
     FindingKey,
     Provenance,
+    VulnId,
     merge_findings,
 )
 from maat_vuln.models.input import SCHEMA_VERSION, FindingsInput
@@ -56,5 +57,6 @@ __all__ = [
     "SnapshotId",
     "Summary",
     "UtcDatetime",
+    "VulnId",
     "merge_findings",
 ]
