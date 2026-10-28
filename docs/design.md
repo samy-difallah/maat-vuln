@@ -18,7 +18,7 @@ Out of scope: SBOM generation; image/secret/IaC/license scanning; host or networ
 1. **Unit of prioritization: vulnerability × component.** Signals (KEV, EPSS, CVSS) are resolved once per vulnerability; the Decision belongs to the finding, because VEX and context are component-specific.
 2. **Verdict: P1–P4**, sorted by EPSS probability then CVSS. No 0–100 score.
 3. **Pivot identifier: CVE.** Aliases (GHSA, EUVD, GCVE, OSV…) are accepted and kept; when a CVE alias exists it becomes the pivot. Findings without a CVE are kept, without feed signals.
-4. **CVSS source:** values supplied in the input first; otherwise looked up in CIRCL Vulnerability-Lookup and cached in the snapshot. Provenance is recorded.
+4. **CVSS source:** values supplied in the input first, combined across every finding of the vulnerability; otherwise looked up in CIRCL Vulnerability-Lookup and cached in the snapshot. Provenance is recorded.
 5. **EPSS:** probability, percentile, model version and score date are all kept.
 
 ## 3. Data contract
@@ -122,13 +122,13 @@ Sort order of decisions: priority (P1 → P4, unscored last), then EPSS probabil
   - `maat rank [IDS...] [--input FILE|-] [--format table|json] [--snapshot ID] [--refresh]`
   - `maat explain ID [--component PURL]`: rule, signal values, sources, snapshot
   - `maat snapshot fetch` / `maat snapshot show [ID]`
-- Library entry points: `maat_vuln.aprioritize(findings, snapshot) -> Report` (async) and `maat_vuln.prioritize(findings, snapshot) -> Report` (sync facade), see §6.
+- Library entry points: `maat_vuln.aprioritize(findings, snapshot) -> Report` (async) and `maat_vuln.prioritize(findings, snapshot) -> Report` (sync facade), see §6; `maat_vuln.afetch_snapshot() -> Snapshot` and `maat_vuln.fetch_snapshot() -> Snapshot` fetch KEV and EPSS into a new snapshot.
 - Generated JSON Schemas for input and Report under `schemas/`.
 - Repo hygiene: Apache-2.0 `LICENSE`, `license = "Apache-2.0"` in `pyproject.toml`, CI (tests, ruff, import-linter, schema drift).
 
 ## 6. Network access
 
-KEV and EPSS are fetched as full feed files, one request each. The only per-vulnerability requests are the CVSS lookups in Vulnerability-Lookup, for findings whose input carries no CVSS: that path must stay fast on inputs with hundreds of vulnerabilities.
+KEV and EPSS are fetched as full feed files, one request each. The only per-vulnerability requests are the CVSS lookups in Vulnerability-Lookup, for vulnerabilities none of whose findings carries CVSS in the input: that path must stay fast on inputs with hundreds of vulnerabilities.
 
 - **Async core, sync facade.** Feed clients use `httpx.AsyncClient`. `aprioritize()` is the async entry point; `prioritize()` runs it with `asyncio.run()`. When an event loop is already running, `prioritize()` raises a clear error pointing to `aprioritize()` instead of failing obscurely.
 - **One shared client** per run, so connections are reused, with explicit connect and read timeouts.
