@@ -127,6 +127,13 @@ forbidden_modules = [
 ]
 ignore_imports = ["maat_vuln.feeds -> maat_vuln.feeds.*"]
 
+[[tool.importlinter.contracts]]
+name = "Import engine from maat_vuln.engine, not its submodules"
+type = "forbidden"
+source_modules = ["maat_vuln.*", "tests"]
+forbidden_modules = ["maat_vuln.engine.core"]
+ignore_imports = ["maat_vuln.engine -> maat_vuln.engine.*"]
+
 [tool.pytest.ini_options]
 addopts = [
     "--import-mode=importlib",
