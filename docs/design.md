@@ -119,7 +119,7 @@ Sort order of decisions: priority (P1 → P4, unscored last), then EPSS probabil
 - Default policy (§4).
 - Output: Rich table and JSON Report.
 - CLI (names may be refined during planning):
-  - `maat rank [IDS...] [--input FILE|-] [--format table|json] [--snapshot ID] [--refresh]`
+  - `maat rank [IDS...] [--input FILE|-] [--format table|json] [--snapshot ID] [--refresh] [--concurrency N]`: ID arguments and `--input` (a JSON document, `-` for stdin) combine; with neither, stdin is read as one ID per line. When the cache holds no snapshot, one is fetched. `--concurrency` caps simultaneous CVSS lookups (§6).
   - `maat explain ID [--component PURL]`: rule, signal values, sources, snapshot
   - `maat snapshot fetch` / `maat snapshot show [ID]`
 - Library entry points: `maat_vuln.aprioritize(findings, snapshot) -> Report` (async) and `maat_vuln.prioritize(findings, snapshot) -> Report` (sync facade), see §6; `maat_vuln.afetch_snapshot() -> Snapshot` and `maat_vuln.fetch_snapshot() -> Snapshot` fetch KEV and EPSS into a new snapshot.
