@@ -26,6 +26,8 @@ dependencies = [
     "httpx>=0.28",
     "platformdirs>=4.13",
     "pydantic>=2.14",
+    "rich>=15.0",
+    "typer>=0.27",
 ]
 
 [project.optional-dependencies]
@@ -45,6 +47,9 @@ release = [
     "build>=1.6",
 ]
 dev = ["maat-vuln[test,lint,release]"]
+
+[project.scripts]
+maat = "maat_vuln.cli:app"
 
 [project.urls]
 Repository = "https://github.com/samy-difallah/maat-vuln"
@@ -133,6 +138,13 @@ type = "forbidden"
 source_modules = ["maat_vuln.*", "tests"]
 forbidden_modules = ["maat_vuln.engine.core"]
 ignore_imports = ["maat_vuln.engine -> maat_vuln.engine.*"]
+
+[[tool.importlinter.contracts]]
+name = "Import cli from maat_vuln.cli, not its submodules"
+type = "forbidden"
+source_modules = ["maat_vuln.*", "tests"]
+forbidden_modules = ["maat_vuln.cli.main"]
+ignore_imports = ["maat_vuln.cli -> maat_vuln.cli.*"]
 
 [tool.pytest.ini_options]
 addopts = [
