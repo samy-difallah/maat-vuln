@@ -1,10 +1,12 @@
-"""Command line: ``maat rank`` prints the prioritized findings.
+"""Command line: ``maat rank`` and ``maat snapshot``.
 
 The CLI stays synchronous and calls the library's sync facades; it is
 the only part of Maât that writes to the terminal.
 """
 
 import sys
+from collections.abc import Iterator
+from contextlib import contextmanager
 from enum import StrEnum
 from typing import Annotated
 
@@ -29,6 +31,7 @@ from maat_vuln.snapshot import (
     SnapshotError,
     latest_snapshot,
     load_snapshot,
+    read_cvss,
 )
 
 EXIT_ERROR = 1
@@ -44,12 +47,17 @@ COLUMNS = (
     "Rule",
     "Flags",
 )
+FEED_COLUMNS = ("Feed", "Version", "Retrieved", "URL", "SHA-256")
 
 app = typer.Typer(no_args_is_help=True, add_completion=False)
+snapshot_app = typer.Typer(no_args_is_help=True)
+app.add_typer(
+    snapshot_app, name="snapshot", help="Fetch or inspect feed snapshots."
+)
 
 
 class OutputFormat(StrEnum):
-    """Output format of ``maat rank``."""
+    """Output format of a command."""
 
     TABLE = "table"
     JSON = "json"
@@ -58,6 +66,16 @@ class OutputFormat(StrEnum):
 @app.callback()
 def main() -> None:
     """Maât: exploitation-driven vulnerability prioritization."""
+
+
+@contextmanager
+def _fail_cleanly() -> Iterator[None]:
+    """Turn expected errors into a message on stderr and exit code 1."""
+    try:
+        yield
+    except (ValidationError, SnapshotError, FetchError) as error:
+        typer.echo(f"Error: {error}", err=True)
+        raise typer.Exit(EXIT_ERROR) from error
 
 
 def _read_findings(
@@ -173,15 +191,71 @@ def rank(
         raise typer.BadParameter(
             "cannot be combined with --snapshot", param_hint="'--refresh'"
         )
-    try:
+    with _fail_cleanly():
         findings = _read_findings(ids or [], document)
         report = prioritize(
             findings, _snapshot(snapshot_id, refresh), concurrency
         )
-    except (ValidationError, SnapshotError, FetchError) as error:
-        typer.echo(f"Error: {error}", err=True)
-        raise typer.Exit(EXIT_ERROR) from error
     if output is OutputFormat.JSON:
         typer.echo(report.model_dump_json(indent=2))
     else:
         _print_table(report)
+
+
+@snapshot_app.command("fetch")
+def snapshot_fetch() -> None:
+    """Fetch the KEV and EPSS feeds into a new snapshot; print its ID."""
+    with _fail_cleanly():
+        snapshot = fetch_snapshot()
+    typer.echo(snapshot.manifest.snapshot_id)
+
+
+def _print_snapshot(snapshot: Snapshot) -> None:
+    """Print a snapshot's identity, then one table row per feed."""
+    manifest = snapshot.manifest
+    # Plain echo: Rich would wrap the path, which must stay copyable.
+    typer.echo(f"snapshot {manifest.snapshot_id}")
+    typer.echo(f"created {manifest.created_at.isoformat()}")
+    typer.echo(f"path {snapshot.path}")
+    typer.echo(f"cached CVSS lookups {len(read_cvss(snapshot))}")
+    table = Table(*FEED_COLUMNS)
+    # Fold rather than truncate: the URL and hash matter in full.
+    for column in table.columns:
+        column.overflow = "fold"
+    for feed in manifest.feeds:
+        table.add_row(
+            feed.name,
+            "\n".join(f"{key}={value}" for key, value in feed.version.items()),
+            feed.retrieved_at.isoformat(),
+            feed.url,
+            feed.sha256,
+        )
+    Console().print(table)
+
+
+@snapshot_app.command("show")
+def snapshot_show(
+    snapshot_id: Annotated[
+        str | None,
+        typer.Argument(metavar="[ID]", help="Snapshot ID, latest if none."),
+    ] = None,
+    output: Annotated[
+        OutputFormat, typer.Option("--format", help="Output format.")
+    ] = OutputFormat.TABLE,
+) -> None:
+    """Show a snapshot's manifest: its feeds, versions and hashes."""
+    with _fail_cleanly():
+        snapshot = (
+            latest_snapshot()
+            if snapshot_id is None
+            else load_snapshot(snapshot_id)
+        )
+    if snapshot is None:
+        typer.echo(
+            "Error: no snapshot in cache, run maat snapshot fetch", err=True
+        )
+        raise typer.Exit(EXIT_ERROR)
+    if output is OutputFormat.JSON:
+        typer.echo(snapshot.manifest.model_dump_json(indent=2))
+    else:
+        _print_snapshot(snapshot)
