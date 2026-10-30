@@ -1,23 +1,30 @@
-"""Command line: ``maat rank`` and ``maat snapshot``.
+"""Command line: ``maat rank``, ``maat explain`` and ``maat snapshot``.
 
 The CLI stays synchronous and calls the library's sync facades; it is
 the only part of Maât that writes to the terminal.
 """
 
 import sys
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from enum import StrEnum
 from typing import Annotated
 
 import typer
-from pydantic import ValidationError
+from pydantic import MISSING, ValidationError
 from rich.console import Console
 from rich.table import Table
+from rich.text import Text
 
 from maat_vuln.engine import fetch_snapshot, prioritize
-from maat_vuln.feeds import DEFAULT_CONCURRENCY, FetchError
+from maat_vuln.feeds import (
+    DEFAULT_CONCURRENCY,
+    EPSS_FEED_NAME,
+    KEV_FEED_NAME,
+    FetchError,
+)
 from maat_vuln.models import (
+    Component,
     CvssSignal,
     Decision,
     EpssSignal,
@@ -36,6 +43,9 @@ from maat_vuln.snapshot import (
 
 EXIT_ERROR = 1
 ABSENT = "-"
+NOT_COMPUTED = "not computed"
+NO_DATA = "no data"
+UNSCORED = "unscored"
 COLUMNS = (
     "Priority",
     "ID",
@@ -107,9 +117,14 @@ def _snapshot(snapshot_id: str | None, refresh: bool) -> Snapshot:
     """Load the requested snapshot, else the latest, else fetch one.
 
     Raises:
+        typer.BadParameter: both a snapshot ID and refresh are given.
         SnapshotError: the snapshot is unknown or inconsistent.
         FetchError: a feed could not be fetched.
     """
+    if snapshot_id is not None and refresh:
+        raise typer.BadParameter(
+            "cannot be combined with --snapshot", param_hint="'--refresh'"
+        )
     if snapshot_id is not None:
         return load_snapshot(snapshot_id)
     if not refresh and (snapshot := latest_snapshot()) is not None:
@@ -187,10 +202,6 @@ def rank(
     The latest snapshot is used unless --snapshot or --refresh is given;
     one is fetched when the cache has none.
     """
-    if snapshot_id is not None and refresh:
-        raise typer.BadParameter(
-            "cannot be combined with --snapshot", param_hint="'--refresh'"
-        )
     with _fail_cleanly():
         findings = _read_findings(ids or [], document)
         report = prioritize(
@@ -200,6 +211,125 @@ def rank(
         typer.echo(report.model_dump_json(indent=2))
     else:
         _print_table(report)
+
+
+def _describe[S](
+    signal: S | MISSING | None, describe: Callable[[S], str]
+) -> str:
+    """Describe a signal, telling not computed from looked up in vain."""
+    if signal is MISSING:
+        return NOT_COMPUTED
+    if signal is None:
+        return NO_DATA
+    return describe(signal)
+
+
+def _kev(kev: KevSignal) -> str:
+    """Describe a KEV status with its dates."""
+    if not kev.in_kev:
+        return "not in KEV"
+    ransomware = kev.known_ransomware_campaign_use
+    return (
+        f"in KEV, added {kev.date_added}, due {kev.due_date}, known"
+        f" ransomware use {'yes' if ransomware is True else 'no'}"
+    )
+
+
+def _epss(epss: EpssSignal) -> str:
+    """Describe an EPSS score with its model and date."""
+    return (
+        f"probability {epss.probability:.5f}, percentile"
+        f" {epss.percentile:.5f}, model {epss.model_version}, scored"
+        f" {epss.score_date}"
+    )
+
+
+def _cvss(cvss: CvssSignal) -> str:
+    """List every CVSS value with its source, the selected one marked."""
+    return "\n".join(
+        f"{value.base_score:.1f} v{value.version} {value.vector or ''}"
+        f" ({value.source}){' selected' if value == cvss.selected else ''}"
+        for value in cvss.values
+    )
+
+
+def _feed_source(snapshot: Snapshot, name: str) -> str:
+    """Name the snapshot feed file a signal was read from."""
+    feed = next(f for f in snapshot.manifest.feeds if f.name == name)
+    return f"{feed.url}, retrieved {feed.retrieved_at.isoformat()}"
+
+
+def _print_decision(decision: Decision, snapshot: Snapshot) -> None:
+    """Print a decision: its rule, then each signal and its source."""
+    explanation = decision.explanation
+    signals = explanation.signals
+    lines = [
+        ("ID", decision.finding_key.id),
+        ("Component", decision.finding_key.component or ABSENT),
+        ("Priority", decision.priority or UNSCORED),
+        ("Rule", decision.rule_id),
+        ("Condition", explanation.rule),
+        (
+            "Thresholds",
+            ", ".join(f"{k} {v}" for k, v in explanation.thresholds.items())
+            or ABSENT,
+        ),
+    ]
+    for label, signal, describe, feed in (
+        ("KEV", signals.kev, _kev, KEV_FEED_NAME),
+        ("EPSS", signals.epss, _epss, EPSS_FEED_NAME),
+        ("CVSS", signals.cvss, _cvss, None),
+    ):
+        lines.append((label, _describe(signal, describe)))
+        # A feed was searched, in vain or not, whenever its signal is set.
+        if feed is not None and signal is not MISSING:
+            lines.append((f"{label} source", _feed_source(snapshot, feed)))
+    lines += [
+        ("Flags", ", ".join(decision.flags) or ABSENT),
+        ("Snapshot", decision.snapshot_id),
+        ("Created", snapshot.manifest.created_at.isoformat()),
+    ]
+    table = Table.grid(padding=(0, 2))
+    for label, value in lines:
+        table.add_row(label, Text(value))
+    Console().print(table)
+
+
+@app.command()
+def explain(
+    vuln_id: Annotated[
+        str, typer.Argument(metavar="ID", help="Vulnerability ID.")
+    ],
+    purl: Annotated[
+        str | None,
+        typer.Option("--component", help="Package URL of the component."),
+    ] = None,
+    output: Annotated[
+        OutputFormat, typer.Option("--format", help="Output format.")
+    ] = OutputFormat.TABLE,
+    snapshot_id: Annotated[
+        str | None,
+        typer.Option("--snapshot", help="Snapshot ID to explain against."),
+    ] = None,
+    refresh: Annotated[
+        bool,
+        typer.Option("--refresh", help="Fetch a new snapshot first."),
+    ] = False,
+) -> None:
+    """Explain the priority of one vulnerability: rule and signals.
+
+    The latest snapshot is used unless --snapshot or --refresh is given;
+    one is fetched when the cache has none.
+    """
+    component = Component(purl=purl) if purl else None
+    with _fail_cleanly():
+        finding = Finding(id=vuln_id, component=component)
+        snapshot = _snapshot(snapshot_id, refresh)
+        decision = prioritize([finding], snapshot).decisions[0]
+    if output is OutputFormat.JSON:
+        typer.echo(decision.model_dump_json(indent=2))
+    else:
+        _print_decision(decision, snapshot)
 
 
 @snapshot_app.command("fetch")
