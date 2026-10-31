@@ -92,7 +92,7 @@ Maintainers release as follows:
 
 1. Create `release/X.Y.Z` from `develop` (for a hotfix: `hotfix/<name>` from `main`).
 2. Set `version` in `pyproject.toml` to `git cliff --bumped-version` (without the `v`), run `git cliff --unreleased --tag vX.Y.Z --prepend CHANGELOG.md` and review the new section. Commit both as `chore(release): prepare X.Y.Z`.
-3. Push the branch: a `X.Y.Z.devN` rehearsal is published to TestPyPI. Install it in a clean virtual environment (`pip install --pre --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ maat-vuln`) and run `maat` on a few CVE IDs.
+3. Push the branch: a `X.Y.Z.devN` rehearsal is published to TestPyPI. Install it in a clean virtual environment (`pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ maat-vuln==X.Y.Z.devN`, with the version the workflow published; `--pre` would also pull pre-releases of the dependencies) and run `maat` on a few CVE IDs.
 4. Open the pull request from `release/X.Y.Z` into `main` and merge it with a merge commit. Make sure the changelog date is the release day.
 5. Tag the merge commit on `main` (`git tag -a vX.Y.Z -m vX.Y.Z`) and push the tag: PyPI publishing and the GitHub release follow. Release tags cannot be moved or deleted.
 6. Open a pull request from `main` into `develop` and merge it with a merge commit. If it conflicts, resolve it on a temporary branch created from `main` (`git merge develop`, fix, pull request into `develop` with a merge commit), never by committing to `main`.
