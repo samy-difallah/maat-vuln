@@ -120,8 +120,8 @@ Sort order of decisions: priority (P1 → P4, unscored last), then EPSS probabil
 - Output: Rich table and JSON Report.
 - CLI (names may be refined during planning):
   - `maat rank [IDS...] [--input FILE|-] [--format table|json] [--snapshot ID] [--refresh] [--concurrency N]`: ID arguments and `--input` (a JSON document, `-` for stdin) combine; with neither, stdin is read as one ID per line. When the cache holds no snapshot, one is fetched. `--concurrency` caps simultaneous CVSS lookups (§6).
-  - `maat explain ID [--component PURL]`: rule, signal values, sources, snapshot
-  - `maat snapshot fetch` / `maat snapshot show [ID]`
+  - `maat explain ID [--component PURL] [--format table|json] [--snapshot ID] [--refresh]`: rule, signal values, sources, snapshot (`json`: the Decision); snapshot options as for `rank`
+  - `maat snapshot fetch` / `maat snapshot show [ID] [--format table|json]`: `fetch` prints the new snapshot ID; `show` prints the given or latest snapshot: ID, creation date, cached CVSS lookups and each feed's version, URL and hash (`json`: the manifest)
 - Library entry points: `maat_vuln.aprioritize(findings, snapshot) -> Report` (async) and `maat_vuln.prioritize(findings, snapshot) -> Report` (sync facade), see §6; `maat_vuln.afetch_snapshot() -> Snapshot` and `maat_vuln.fetch_snapshot() -> Snapshot` fetch KEV and EPSS into a new snapshot.
 - Generated JSON Schemas for input and Report under `schemas/`.
 - Repo hygiene: Apache-2.0 `LICENSE`, `license = "Apache-2.0"` in `pyproject.toml`, CI (tests, ruff, import-linter, schema drift).
