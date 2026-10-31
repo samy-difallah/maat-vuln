@@ -1,7 +1,7 @@
 """Command line: ``maat rank``, ``maat explain`` and ``maat snapshot``.
 
 The CLI stays synchronous and calls the library's sync facades; it is
-the only part of Maât that writes to the terminal.
+the only part of Maat that writes to the terminal.
 """
 
 import sys
@@ -75,7 +75,7 @@ class OutputFormat(StrEnum):
 
 @app.callback()
 def main() -> None:
-    """Maât: exploitation-driven vulnerability prioritization."""
+    """Maat: exploitation-driven vulnerability prioritization."""
 
 
 @contextmanager

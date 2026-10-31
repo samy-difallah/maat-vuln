@@ -1,6 +1,6 @@
 # maat-vuln
 
-Maât: exploitation-driven vulnerability prioritization, as a Python library first with a thin CLI on top. It ranks vulnerabilities with CISA KEV and FIRST EPSS (CVSS as a secondary signal); every verdict is explained and tied to a dated, hashed snapshot of the feeds.
+Maat: exploitation-driven vulnerability prioritization, as a Python library first with a thin CLI on top. It ranks vulnerabilities with CISA KEV and FIRST EPSS (CVSS as a secondary signal); every verdict is explained and tied to a dated, hashed snapshot of the feeds.
 
 The design (data contract, default policy, roadmap) is the reference for every decision:
 
@@ -91,7 +91,7 @@ Enforced by ruff `ANN` rules — never disabled to make code pass.
 - Markdown files: no hard-wrapped lines (one paragraph or list item per line), exactly one blank line between blocks, headings in sentence case, and text after a `**Label**:` continues in lowercase unless it starts with a proper noun.
 - Links in `README.md` are absolute URLs to the `main` branch (`blob/main/` for files, `tree/main/` for directories): it is also the PyPI project page.
 - Never document an unreleased feature as available. The roadmap section of the README may announce planned versions as planned.
-- Do not mention other projects as consumers of Maât in public documentation.
+- Do not mention other projects as consumers of Maat in public documentation.
 
 ## CI
 

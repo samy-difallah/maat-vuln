@@ -1,6 +1,6 @@
-# Contributing to Maât
+# Contributing to Maat
 
-Thanks for your interest in Maât. This guide covers the conventions every change follows. The design document, [docs/design.md](docs/design.md), is the reference for every decision: read it before proposing a feature.
+Thanks for your interest in Maat. This guide covers the conventions every change follows. The design document, [docs/design.md](docs/design.md), is the reference for every decision: read it before proposing a feature.
 
 ## Scope
 
@@ -8,7 +8,7 @@ Work happens one roadmap milestone at a time: the current milestone is the first
 
 ## Setup
 
-Maât uses pip and a virtual environment. `pyproject.toml` is the single source of truth for dependencies: there is no `requirements*.txt`, and none should be added.
+Maat uses pip and a virtual environment. `pyproject.toml` is the single source of truth for dependencies: there is no `requirements*.txt`, and none should be added.
 
 ```sh
 python3 -m venv .venv && . .venv/bin/activate
