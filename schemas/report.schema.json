@@ -1,0 +1,409 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "CvssSignal": {
+      "additionalProperties": false,
+      "description": "Every known CVSS value and the one selected by the policy.",
+      "properties": {
+        "values": {
+          "items": {
+            "$ref": "#/$defs/CvssValue"
+          },
+          "minItems": 1,
+          "title": "Values",
+          "type": "array"
+        },
+        "selected": {
+          "$ref": "#/$defs/CvssValue"
+        }
+      },
+      "required": [
+        "values",
+        "selected"
+      ],
+      "title": "CvssSignal",
+      "type": "object"
+    },
+    "CvssValue": {
+      "additionalProperties": false,
+      "description": "CVSS value with its provenance.",
+      "properties": {
+        "version": {
+          "enum": [
+            "4.0",
+            "3.1",
+            "3.0",
+            "2.0"
+          ],
+          "title": "Version",
+          "type": "string"
+        },
+        "base_score": {
+          "maximum": 10,
+          "minimum": 0,
+          "title": "Base Score",
+          "type": "number"
+        },
+        "vector": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Vector"
+        },
+        "source": {
+          "enum": [
+            "input",
+            "vulnerability-lookup"
+          ],
+          "title": "Source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "version",
+        "base_score",
+        "vector",
+        "source"
+      ],
+      "title": "CvssValue",
+      "type": "object"
+    },
+    "Decision": {
+      "additionalProperties": false,
+      "description": "Priority given to one finding, with the rule that set it.",
+      "properties": {
+        "finding_key": {
+          "$ref": "#/$defs/FindingKey"
+        },
+        "priority": {
+          "anyOf": [
+            {
+              "enum": [
+                "P1",
+                "P2",
+                "P3",
+                "P4"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Priority"
+        },
+        "rule_id": {
+          "title": "Rule Id",
+          "type": "string"
+        },
+        "flags": {
+          "items": {
+            "$ref": "#/$defs/Flag"
+          },
+          "title": "Flags",
+          "type": "array"
+        },
+        "explanation": {
+          "$ref": "#/$defs/Explanation"
+        },
+        "policy_id": {
+          "title": "Policy Id",
+          "type": "string"
+        },
+        "policy_version": {
+          "title": "Policy Version",
+          "type": "integer"
+        },
+        "snapshot_id": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Snapshot Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "finding_key",
+        "priority",
+        "rule_id",
+        "flags",
+        "explanation",
+        "policy_id",
+        "policy_version",
+        "snapshot_id"
+      ],
+      "title": "Decision",
+      "type": "object"
+    },
+    "EpssSignal": {
+      "additionalProperties": false,
+      "description": "FIRST EPSS score of a vulnerability.",
+      "properties": {
+        "probability": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Probability",
+          "type": "number"
+        },
+        "percentile": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Percentile",
+          "type": "number"
+        },
+        "model_version": {
+          "title": "Model Version",
+          "type": "string"
+        },
+        "score_date": {
+          "format": "date",
+          "title": "Score Date",
+          "type": "string"
+        }
+      },
+      "required": [
+        "probability",
+        "percentile",
+        "model_version",
+        "score_date"
+      ],
+      "title": "EpssSignal",
+      "type": "object"
+    },
+    "Explanation": {
+      "additionalProperties": false,
+      "description": "Why a rule matched: its condition, thresholds and signal values.",
+      "properties": {
+        "rule": {
+          "title": "Rule",
+          "type": "string"
+        },
+        "thresholds": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "title": "Thresholds",
+          "type": "object"
+        },
+        "signals": {
+          "$ref": "#/$defs/Signals"
+        }
+      },
+      "required": [
+        "rule",
+        "thresholds",
+        "signals"
+      ],
+      "title": "Explanation",
+      "type": "object"
+    },
+    "FindingKey": {
+      "description": "Identity of a finding: pivot ID and component key.",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "component": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Component"
+        }
+      },
+      "required": [
+        "id",
+        "component"
+      ],
+      "title": "FindingKey",
+      "type": "object"
+    },
+    "Flag": {
+      "description": "Data-quality flag attached to a decision.",
+      "enum": [
+        "cvss_missing",
+        "cvss_lookup_failed",
+        "epss_missing",
+        "cvss_legacy",
+        "unresolved_id",
+        "unscored"
+      ],
+      "title": "Flag",
+      "type": "string"
+    },
+    "KevSignal": {
+      "additionalProperties": false,
+      "description": "CISA KEV status; the details are absent when not in KEV.",
+      "properties": {
+        "in_kev": {
+          "title": "In Kev",
+          "type": "boolean"
+        },
+        "date_added": {
+          "format": "date",
+          "title": "Date Added",
+          "type": "string"
+        },
+        "due_date": {
+          "format": "date",
+          "title": "Due Date",
+          "type": "string"
+        },
+        "known_ransomware_campaign_use": {
+          "title": "Known Ransomware Campaign Use",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "in_kev"
+      ],
+      "title": "KevSignal",
+      "type": "object"
+    },
+    "PolicyRef": {
+      "additionalProperties": false,
+      "description": "Policy a report was computed with.",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "version": {
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "version"
+      ],
+      "title": "PolicyRef",
+      "type": "object"
+    },
+    "Signals": {
+      "additionalProperties": false,
+      "description": "KEV, EPSS and CVSS signals of one vulnerability.",
+      "properties": {
+        "kev": {
+          "$ref": "#/$defs/KevSignal"
+        },
+        "epss": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EpssSignal"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "cvss": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CvssSignal"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "title": "Signals",
+      "type": "object"
+    },
+    "Summary": {
+      "additionalProperties": false,
+      "description": "Number of decisions per priority, ``unscored`` for no priority.",
+      "properties": {
+        "P1": {
+          "minimum": 0,
+          "title": "P1",
+          "type": "integer"
+        },
+        "P2": {
+          "minimum": 0,
+          "title": "P2",
+          "type": "integer"
+        },
+        "P3": {
+          "minimum": 0,
+          "title": "P3",
+          "type": "integer"
+        },
+        "P4": {
+          "minimum": 0,
+          "title": "P4",
+          "type": "integer"
+        },
+        "unscored": {
+          "minimum": 0,
+          "title": "Unscored",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "P1",
+        "P2",
+        "P3",
+        "P4",
+        "unscored"
+      ],
+      "title": "Summary",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Top-level output document: sorted decisions and their summary.",
+  "properties": {
+    "schema_version": {
+      "default": "0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "generated_at": {
+      "format": "date-time",
+      "title": "Generated At",
+      "type": "string"
+    },
+    "maat_version": {
+      "title": "Maat Version",
+      "type": "string"
+    },
+    "policy": {
+      "$ref": "#/$defs/PolicyRef"
+    },
+    "snapshot_id": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Snapshot Id",
+      "type": "string"
+    },
+    "decisions": {
+      "items": {
+        "$ref": "#/$defs/Decision"
+      },
+      "title": "Decisions",
+      "type": "array"
+    },
+    "summary": {
+      "$ref": "#/$defs/Summary"
+    }
+  },
+  "required": [
+    "generated_at",
+    "maat_version",
+    "policy",
+    "snapshot_id",
+    "decisions",
+    "summary"
+  ],
+  "title": "Report",
+  "type": "object"
+}
