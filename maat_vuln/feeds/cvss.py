@@ -38,7 +38,7 @@ NVD_RECORD_FIELDS: dict[str, CvssVersion] = {
 
 
 class _Cvss(BaseModel):
-    """CVSS object of either record; fields Maât does not use are ignored."""
+    """CVSS object of either record; fields Maat does not use are ignored."""
 
     baseScore: CvssScore  # noqa: N815 (field name of the record schemas)
     vectorString: str | None = None  # noqa: N815

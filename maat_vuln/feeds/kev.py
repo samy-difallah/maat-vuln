@@ -23,7 +23,7 @@ RANSOMWARE_KNOWN = "Known"
 
 
 class _KevEntry(BaseModel):
-    """Catalog entry; fields Maât does not use are ignored."""
+    """Catalog entry; fields Maat does not use are ignored."""
 
     cveID: VulnId  # noqa: N815 (field name of the CISA schema)
     dateAdded: date  # noqa: N815

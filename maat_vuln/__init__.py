@@ -1,4 +1,4 @@
-"""Maât: exploitation-driven vulnerability prioritization."""
+"""Maat: exploitation-driven vulnerability prioritization."""
 
 from maat_vuln.engine import (
     afetch_snapshot,

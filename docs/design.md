@@ -1,10 +1,10 @@
-# Maât: design document
+# Maat: design document
 
 ## 1. Purpose and positioning
 
-Maât weighs vulnerabilities and returns an explained verdict. It does not discover vulnerabilities: it prioritizes findings it is given.
+Maat weighs vulnerabilities and returns an explained verdict. It does not discover vulnerabilities: it prioritizes findings it is given.
 
-Prioritization from KEV + EPSS + CVSS already exists elsewhere. Maât's value is:
+Prioritization from KEV + EPSS + CVSS already exists elsewhere. Maat's value is:
 
 - **Explainability**: every priority comes from a named rule, shown by `explain`.
 - **Reproducibility**: verdicts reference a dated, hashed snapshot of the feeds and a versioned policy.
@@ -46,7 +46,7 @@ Component: `purl` (preferred), `bom_ref`, `name`, `version`. A finding's key is 
 
 CvssInput: `version` (`4.0`, `3.1`, `3.0`, `2.0`) and `base_score` (0–10) required, `vector` optional.
 
-Input document: `{"schema_version": ..., "findings": [...]}`. Input being tolerant, `schema_version` is optional; when present, its major version must match Maât's.
+Input document: `{"schema_version": ..., "findings": [...]}`. Input being tolerant, `schema_version` is optional; when present, its major version must match Maat's.
 
 ### Signals (per vulnerability, from the snapshot)
 

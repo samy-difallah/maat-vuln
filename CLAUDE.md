@@ -1,6 +1,6 @@
 # maat-vuln
 
-Maât: exploitation-driven vulnerability prioritization, as a Python library first with a thin CLI on top. It ranks vulnerabilities with CISA KEV and FIRST EPSS (CVSS as a secondary signal); every verdict is explained and tied to a dated, hashed snapshot of the feeds.
+Maat: exploitation-driven vulnerability prioritization, as a Python library first with a thin CLI on top. It ranks vulnerabilities with CISA KEV and FIRST EPSS (CVSS as a secondary signal); every verdict is explained and tied to a dated, hashed snapshot of the feeds.
 
 The design (data contract, default policy, roadmap) is the reference for every decision:
 
@@ -91,7 +91,7 @@ Enforced by ruff `ANN` rules — never disabled to make code pass.
 - Markdown files: no hard-wrapped lines (one paragraph or list item per line), exactly one blank line between blocks, headings in sentence case, and text after a `**Label**:` continues in lowercase unless it starts with a proper noun.
 - Links in `README.md` are absolute URLs to the `main` branch (`blob/main/` for files, `tree/main/` for directories): it is also the PyPI project page.
 - Never document an unreleased feature as available. The roadmap section of the README may announce planned versions as planned.
-- Do not mention other projects as consumers of Maât in public documentation.
+- Do not mention other projects as consumers of Maat in public documentation.
 
 ## CI
 
@@ -107,7 +107,7 @@ Versions follow SemVer `X.Y.Z`, configured in `[tool.git-cliff.bump]` with `feat
 
 1. Create `release/X.Y.Z` from `develop` (hotfix: `hotfix/<name>` from `main`).
 2. Set `version` in `pyproject.toml` to `git cliff --bumped-version` (without the `v`), then run `git cliff --unreleased --tag vX.Y.Z --prepend CHANGELOG.md` and review the new section. Commit both together as `chore(release): prepare X.Y.Z`.
-3. Push the branch: the TestPyPI rehearsal runs. Install it in a clean venv (`pip install --pre --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ maat-vuln`) and run `maat` on a few CVE IDs.
+3. Push the branch: the TestPyPI rehearsal runs. Install it in a clean venv (`pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ maat-vuln==X.Y.Z.devN`, with the version the workflow published; `--pre` would also pull pre-releases of the dependencies) and run `maat` on a few CVE IDs.
 4. Open the PR from `release/X.Y.Z` into `main` and merge it with a merge commit. Make sure the changelog date is the release day.
 5. Tag the merge commit on `main` (`git tag -a vX.Y.Z -m vX.Y.Z`) and push the tag: PyPI publishing and the GitHub release follow. Release tags `v*` cannot be moved or deleted.
 6. Open a PR from `main` into `develop` and merge it with a merge commit, never a squash: git-cliff only sees tags that are ancestors of the current branch. If it conflicts, resolve on a temporary branch created from `main` (`git merge develop`, fix, PR into `develop` with a merge commit), never by committing to `main`.
