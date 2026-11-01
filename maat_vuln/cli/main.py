@@ -61,6 +61,7 @@ COLUMNS = (
 )
 NUMERIC_COLUMNS = frozenset({"EPSS", "Pctl", "CVSS"})
 FEED_INDENT = "  "
+FETCH_STATUS = "Fetching the KEV and EPSS feeds…"
 DISPLAY_TIMESTAMP = "%Y-%m-%dT%H:%M:%SZ"
 GREY = "bright_black"
 PRIORITY_STYLES = {
@@ -380,8 +381,21 @@ def explain(
 @snapshot_app.command("fetch")
 def snapshot_fetch() -> None:
     """Fetch the KEV and EPSS feeds into a new snapshot; print its ID."""
-    with _fail_cleanly():
+    # Progress and feed versions go to stderr: stdout holds only the ID,
+    # so scripts can capture it.
+    console = Console(stderr=True)
+    with _fail_cleanly(), console.status(FETCH_STATUS):
         snapshot = fetch_snapshot()
+    _print_fields(
+        console,
+        [
+            (
+                feed.name,
+                Text(", ".join(f"{k} {v}" for k, v in feed.version.items())),
+            )
+            for feed in snapshot.manifest.feeds
+        ],
+    )
     typer.echo(snapshot.manifest.snapshot_id)
 
 
