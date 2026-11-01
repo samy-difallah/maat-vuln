@@ -214,11 +214,21 @@ def test_unsupported_schema_version(runner, snapshot):
 
 
 def test_snapshot_fetch(runner, respx_mock, kev, epss):
-    """Fetching prints the ID of the new, now latest, snapshot."""
+    """Fetching prints the ID of the new, now latest, snapshot.
+
+    Each feed's version goes to stderr, keeping stdout to the ID alone.
+    """
     mock_feeds(respx_mock, kev, epss)
     result = runner.invoke(app, ["snapshot", "fetch"])
     assert result.exit_code == 0, result.output
-    assert result.stdout.strip() == latest_snapshot().manifest.snapshot_id
+    manifest = latest_snapshot().manifest
+    assert result.stdout == f"{manifest.snapshot_id}\n"
+    lines = result.stderr.splitlines()
+    assert len(lines) == len(manifest.feeds)
+    for line, feed in zip(lines, manifest.feeds, strict=True):
+        assert line.split()[0] == feed.name
+        for key, value in feed.version.items():
+            assert f"{key} {value}" in line
 
 
 def test_snapshot_fetch_failure(runner, respx_mock, epss):
