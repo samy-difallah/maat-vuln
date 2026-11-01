@@ -63,8 +63,22 @@ def test_table(runner, snapshot, respx_mock):
     assert "none.unscored" in ghsa_row
     assert "unresolved_id" in ghsa_row
     assert lines.index(xz_row) < lines.index(ghsa_row)
-    assert "P1 0 · P2 1 · P3 0 · P4 0 · unscored 1" in result.stdout
-    assert f"snapshot {snapshot.manifest.snapshot_id}" in result.stdout
+    summary = lines.index("P1 0 · P2 1 · P3 0 · P4 0 · unscored 1")
+    assert lines[summary + 2] == f"snapshot {snapshot.manifest.snapshot_id}"
+    # Blank lines frame the output and set the summary apart.
+    assert lines[0] == lines[summary - 1] == lines[summary + 1] == ""
+    assert lines[-1] == ""
+
+
+def test_table_colours(runner, snapshot, monkeypatch):
+    """A terminal shows P1 in bold red, in the row and the summary."""
+    monkeypatch.setenv("FORCE_COLOR", "1")
+    result = runner.invoke(
+        app, ["rank", "--input", "-"], input=IN_KEV_DOCUMENT
+    )
+    assert result.exit_code == 0, result.output
+    assert f"\x1b[1;31m{IN_KEV}" in result.stdout
+    assert "\x1b[1;31mP1 1\x1b[0m" in result.stdout
 
 
 def test_json(runner, snapshot, respx_mock):

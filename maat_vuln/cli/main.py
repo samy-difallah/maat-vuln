@@ -12,6 +12,7 @@ from typing import Annotated
 
 import typer
 from pydantic import MISSING, ValidationError
+from rich import box
 from rich.console import Console
 from rich.table import Table
 from rich.text import Text
@@ -57,7 +58,15 @@ COLUMNS = (
     "Rule",
     "Flags",
 )
+NUMERIC_COLUMNS = frozenset({"EPSS", "Pctl", "CVSS"})
 FEED_COLUMNS = ("Feed", "Version", "Retrieved", "URL", "SHA-256")
+GREY = "bright_black"
+PRIORITY_STYLES = {
+    "P1": "bold red",
+    "P2": "dark_orange",
+    "P3": "yellow",
+    "P4": "cyan",
+}
 
 app = typer.Typer(no_args_is_help=True, add_completion=False)
 snapshot_app = typer.Typer(no_args_is_help=True)
@@ -132,40 +141,74 @@ def _snapshot(snapshot_id: str | None, refresh: bool) -> Snapshot:
     return fetch_snapshot()
 
 
-def _row(decision: Decision) -> list[str]:
-    """Render one decision as a table row; absent signals show a dash."""
+def _table(*columns: str) -> Table:
+    """Start a table with a bold header over a heavy rule, no borders."""
+    # Without vertical borders, a 2-space left padding keeps columns apart.
+    return Table(
+        *columns,
+        box=box.SIMPLE_HEAVY,
+        show_edge=False,
+        pad_edge=False,
+        padding=(0, 1, 0, 2),
+        header_style="bold",
+    )
+
+
+def _cell(value: str | None, style: str = "") -> Text:
+    """Style a table cell; a missing value shows an unstyled dash."""
+    return Text(value, style) if value else Text(ABSENT)
+
+
+def _row(decision: Decision) -> list[Text]:
+    """Render one decision as a table row, coloured by its priority."""
     signals = decision.explanation.signals
     kev = signals.kev
     epss = signals.epss
     cvss = signals.cvss
+    style = PRIORITY_STYLES.get(decision.priority or "", "")
+    in_kev = isinstance(kev, KevSignal) and kev.in_kev
     return [
-        decision.priority or ABSENT,
-        decision.finding_key.id,
-        decision.finding_key.component or "",
-        ("yes" if kev.in_kev else "no")
-        if isinstance(kev, KevSignal)
-        else ABSENT,
-        f"{epss.probability:.5f}" if isinstance(epss, EpssSignal) else ABSENT,
-        f"{epss.percentile:.3f}" if isinstance(epss, EpssSignal) else ABSENT,
-        f"{cvss.selected.base_score:.1f} v{cvss.selected.version}"
-        if isinstance(cvss, CvssSignal)
-        else ABSENT,
-        decision.rule_id,
-        ", ".join(decision.flags),
+        _cell(decision.priority, style),
+        _cell(decision.finding_key.id, style),
+        _cell(decision.finding_key.component),
+        _cell(
+            ("yes" if in_kev else "no")
+            if isinstance(kev, KevSignal)
+            else None,
+            style if in_kev else "",
+        ),
+        _cell(
+            f"{epss.probability:.5f}" if isinstance(epss, EpssSignal) else None
+        ),
+        _cell(
+            f"{epss.percentile:.3f}" if isinstance(epss, EpssSignal) else None
+        ),
+        _cell(
+            f"{cvss.selected.base_score:.1f}"
+            if isinstance(cvss, CvssSignal)
+            else None
+        ),
+        _cell(decision.rule_id),
+        _cell(", ".join(decision.flags), GREY),
     ]
 
 
 def _print_table(report: Report) -> None:
     """Print the decisions as a table, then the summary and snapshot."""
-    table = Table(*COLUMNS)
+    table = _table(*COLUMNS)
+    for column in table.columns:
+        if column.header in NUMERIC_COLUMNS:
+            column.justify = "right"
     for decision in report.decisions:
         table.add_row(*_row(decision))
-    console = Console()
-    console.print(table)
-    console.print(
-        " · ".join(f"{key} {count}" for key, count in report.summary)
+    summary = Text(" · ").join(
+        Text(f"{key} {count}", PRIORITY_STYLES.get(key, ""))
+        for key, count in report.summary
     )
-    console.print(f"snapshot {report.snapshot_id}")
+    snapshot = Text(f"snapshot {report.snapshot_id}")
+    console = Console()
+    for block in ("", table, "", summary, "", snapshot, ""):
+        console.print(block)
 
 
 @app.command()
@@ -348,7 +391,7 @@ def _print_snapshot(snapshot: Snapshot) -> None:
     typer.echo(f"created {manifest.created_at.isoformat()}")
     typer.echo(f"path {snapshot.path}")
     typer.echo(f"cached CVSS lookups {len(read_cvss(snapshot))}")
-    table = Table(*FEED_COLUMNS)
+    table = _table(*FEED_COLUMNS)
     # Fold rather than truncate: the URL and hash matter in full.
     for column in table.columns:
         column.overflow = "fold"
