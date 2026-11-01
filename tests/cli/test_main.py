@@ -231,20 +231,29 @@ def test_snapshot_fetch_failure(runner, respx_mock, epss):
 
 
 @pytest.mark.parametrize("given", [False, True])
-def test_snapshot_show(runner, snapshot, given):
-    """Show prints the latest or given snapshot and its feeds."""
+def test_snapshot_show(runner, snapshot, given, monkeypatch):
+    """Show prints the latest or given snapshot, then a block per feed.
+
+    Long values stay on one line even in a narrow terminal, so they
+    copy in one piece.
+    """
+    monkeypatch.setenv("COLUMNS", "40")
     snapshot_id = snapshot.manifest.snapshot_id
     args = [snapshot_id] if given else []
     result = runner.invoke(app, ["snapshot", "show", *args])
     assert result.exit_code == 0, result.output
-    assert f"snapshot {snapshot_id}" in result.stdout
-    assert "cached CVSS lookups 0" in result.stdout
+    lines = [line.split() for line in result.stdout.splitlines()]
+    assert ["Snapshot", snapshot_id] in lines
+    created = next(line[1] for line in lines if line[:1] == ["Created"])
+    assert re.fullmatch(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ", created)
+    assert ["CVSS", "lookups", "0"] in lines
     for feed in snapshot.manifest.feeds:
-        row = next(
-            line for line in result.stdout.splitlines() if feed.url in line
-        )
-        assert feed.name in row
-        assert feed.sha256 in row
+        block = lines[lines.index([feed.name]) :][:4]
+        assert block[1:] == [
+            ["retrieved", "2026-10-22T12:00:00Z"],
+            ["url", feed.url],
+            ["sha256", feed.sha256],
+        ]
 
 
 def test_snapshot_show_json(runner, snapshot):

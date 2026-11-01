@@ -7,6 +7,7 @@ the only part of Maat that writes to the terminal.
 import sys
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
+from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Annotated
 
@@ -59,7 +60,8 @@ COLUMNS = (
     "Flags",
 )
 NUMERIC_COLUMNS = frozenset({"EPSS", "Pctl", "CVSS"})
-FEED_COLUMNS = ("Feed", "Version", "Retrieved", "URL", "SHA-256")
+FEED_INDENT = "  "
+DISPLAY_TIMESTAMP = "%Y-%m-%dT%H:%M:%SZ"
 GREY = "bright_black"
 PRIORITY_STYLES = {
     "P1": "bold red",
@@ -383,27 +385,53 @@ def snapshot_fetch() -> None:
     typer.echo(snapshot.manifest.snapshot_id)
 
 
-def _print_snapshot(snapshot: Snapshot) -> None:
-    """Print a snapshot's identity, then one table row per feed."""
-    manifest = snapshot.manifest
-    # Plain echo: Rich would wrap the path, which must stay copyable.
-    typer.echo(f"snapshot {manifest.snapshot_id}")
-    typer.echo(f"created {manifest.created_at.isoformat()}")
-    typer.echo(f"path {snapshot.path}")
-    typer.echo(f"cached CVSS lookups {len(read_cvss(snapshot))}")
-    table = _table(*FEED_COLUMNS)
-    # Fold rather than truncate: the URL and hash matter in full.
-    for column in table.columns:
-        column.overflow = "fold"
-    for feed in manifest.feeds:
-        table.add_row(
-            feed.name,
-            "\n".join(f"{key}={value}" for key, value in feed.version.items()),
-            feed.retrieved_at.isoformat(),
-            feed.url,
-            feed.sha256,
+def _timestamp(moment: datetime) -> str:
+    """Format a moment as RFC 3339 UTC to the second, for display."""
+    return f"{moment.astimezone(UTC):{DISPLAY_TIMESTAMP}}"
+
+
+def _print_fields(
+    console: Console, fields: list[tuple[str, Text]], indent: str = ""
+) -> None:
+    """Print aligned label/value lines, one field per line."""
+    width = max(len(label) for label, _ in fields) + 2
+    for label, value in fields:
+        # Soft wrap: Rich never breaks a long URL, path or hash, so the
+        # terminal wraps it on screen and it still copies in one piece.
+        console.print(
+            Text(indent) + Text(label.ljust(width), "bold") + value,
+            soft_wrap=True,
         )
-    Console().print(table)
+
+
+def _print_snapshot(snapshot: Snapshot) -> None:
+    """Print a snapshot's identity, then one block of fields per feed."""
+    manifest = snapshot.manifest
+    console = Console()
+    console.print()
+    _print_fields(
+        console,
+        [
+            ("Snapshot", Text(manifest.snapshot_id, "bold")),
+            ("Created", Text(_timestamp(manifest.created_at))),
+            ("Path", Text(str(snapshot.path))),
+            ("CVSS lookups", Text(str(len(read_cvss(snapshot))))),
+        ],
+    )
+    for feed in manifest.feeds:
+        console.print()
+        console.print(Text(feed.name, "bold"))
+        _print_fields(
+            console,
+            [
+                *((key, Text(value)) for key, value in feed.version.items()),
+                ("retrieved", Text(_timestamp(feed.retrieved_at))),
+                ("url", Text(feed.url)),
+                ("sha256", Text(feed.sha256, GREY)),
+            ],
+            indent=FEED_INDENT,
+        )
+    console.print()
 
 
 @snapshot_app.command("show")
