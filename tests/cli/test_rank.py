@@ -55,6 +55,7 @@ def test_table(runner, snapshot, respx_mock, cvss_answer):
     assert "p2.epss_likely" in xz_row
     assert "0.90900" in xz_row
     ghsa_row = next(line for line in lines if GHSA in line)
+    assert ghsa_row.startswith("unscored ")
     assert "none.unscored" in ghsa_row
     # One flag per line, under the first.
     ghsa = lines.index(ghsa_row)

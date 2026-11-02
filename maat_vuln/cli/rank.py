@@ -12,6 +12,7 @@ from rich.text import Text
 from maat_vuln.cli.common import (
     GREY,
     PRIORITY_STYLES,
+    UNSCORED,
     OutputFormat,
     fail_cleanly,
     resolve_snapshot,
@@ -97,7 +98,7 @@ def _row(decision: Decision, with_component: bool) -> list[Text]:
     style = PRIORITY_STYLES.get(decision.priority or "", "")
     in_kev = isinstance(kev, KevSignal) and kev.in_kev
     return [
-        _cell(decision.priority, style),
+        _cell(decision.priority or UNSCORED, style),
         _cell(decision.finding_key.id, style),
         *([_cell(decision.finding_key.component)] if with_component else []),
         _cell(

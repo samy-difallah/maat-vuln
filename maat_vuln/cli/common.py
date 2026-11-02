@@ -29,6 +29,7 @@ PRIORITY_STYLES = {
     "P3": "yellow",
     "P4": "cyan",
 }
+UNSCORED = "unscored"
 
 
 class OutputFormat(StrEnum):
