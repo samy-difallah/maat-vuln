@@ -23,6 +23,7 @@ PURL = "pkg:deb/debian/xz-utils@5.6.0"
 UNKNOWN_SNAPSHOT = "0" * 64
 # Click exits with 2 on usage errors.
 EXIT_USAGE = 2
+NARROW = 80
 
 IN_KEV_DOCUMENT = json.dumps(
     {
@@ -61,13 +62,39 @@ def test_table(runner, snapshot, respx_mock):
     assert "0.90900" in xz_row
     ghsa_row = next(line for line in lines if GHSA in line)
     assert "none.unscored" in ghsa_row
-    assert "unresolved_id" in ghsa_row
-    assert lines.index(xz_row) < lines.index(ghsa_row)
+    # One flag per line, under the first.
+    ghsa = lines.index(ghsa_row)
+    flags = [line.split()[-1] for line in lines[ghsa : ghsa + 4]]
+    assert flags == [
+        "cvss_missing",
+        "epss_missing",
+        "unresolved_id",
+        "unscored",
+    ]
+    assert lines.index(xz_row) < ghsa
+    # No finding has a component: the column is left out.
+    assert "Component" not in result.stdout
     summary = lines.index("P1 0 · P2 1 · P3 0 · P4 0 · unscored 1")
     assert lines[summary + 2] == f"snapshot {snapshot.manifest.snapshot_id}"
     # Blank lines frame the output and set the summary apart.
     assert lines[0] == lines[summary - 1] == lines[summary + 1] == ""
     assert lines[-1] == ""
+
+
+def test_table_narrow(runner, snapshot, respx_mock, monkeypatch):
+    """On a narrow terminal, IDs and scores stay whole; the component folds."""
+    respx_mock.post(CVSS_LOOKUP_URL).respond(200, json=CVSS_ANSWER)
+    monkeypatch.setenv("COLUMNS", str(NARROW))
+    document = json.dumps(
+        {"findings": [{"id": XZ, "component": {"purl": PURL}}, {"id": GHSA}]}
+    )
+    result = runner.invoke(app, ["rank", "--input", "-"], input=document)
+    assert result.exit_code == 0, result.output
+    assert max(len(line) for line in result.stdout.splitlines()) <= NARROW
+    for whole in (XZ, GHSA, "0.90900", "0.998", "10.0"):
+        assert whole in result.stdout
+    assert "…" not in result.stdout
+    assert "pkg:" in result.stdout
 
 
 def test_table_colours(runner, snapshot, monkeypatch):
