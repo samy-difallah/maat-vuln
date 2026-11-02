@@ -33,6 +33,20 @@ def test_empty_id_is_rejected():
         Finding(id="  ")
 
 
+@pytest.mark.parametrize(
+    "finding",
+    [
+        {"id": "cve-list.txt"},
+        {"id": "CVE-2021-442"},
+        {"id": "GHSA-xxxx-yyyy-zzzz", "aliases": ["CVE-21-44228"]},
+    ],
+)
+def test_malformed_cve_is_rejected(finding):
+    """An ID or alias with the CVE prefix must be a well-formed CVE."""
+    with pytest.raises(ValidationError, match="malformed CVE ID"):
+        Finding.model_validate(finding)
+
+
 def test_unknown_fields_are_ignored():
     """Input is tolerant of fields outside the contract."""
     finding = Finding.model_validate({"id": "CVE-2024-0001", "severity": "x"})

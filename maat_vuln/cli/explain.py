@@ -11,6 +11,7 @@ from rich.text import Text
 from maat_vuln.cli.common import (
     GREY,
     PRIORITY_STYLES,
+    UNSCORED,
     OutputFormat,
     fail_cleanly,
     print_fields,
@@ -34,7 +35,6 @@ NOT_COMPUTED = "not computed, no CVE ID"
 LOOKUP_FAILED = "lookup failed, retried on the next run"
 SELECTED = "selected"
 NO_DATA = "no data"
-UNSCORED = "unscored"
 
 
 def _describe[S](

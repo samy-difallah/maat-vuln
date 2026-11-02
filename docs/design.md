@@ -34,7 +34,7 @@ General rules:
 
 | Field | Type | Notes |
 |---|---|---|
-| `id` | str | required; normalized to uppercase; replaced by the pivot after validation |
+| `id` | str | required; normalized to uppercase; rejected when it starts with `CVE-` but is not a well-formed CVE ID (same for aliases); replaced by the pivot after validation |
 | `aliases` | list[str] | optional; normalized, deduplicated, sorted; holds every ID but the pivot |
 | `component` | Component \| None | **Provisional:** optional, to allow bare IDs |
 | `cvss` | list[CvssInput] | optional; CVSS supplied by the input |
