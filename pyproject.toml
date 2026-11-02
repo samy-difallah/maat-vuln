@@ -143,7 +143,13 @@ ignore_imports = ["maat_vuln.engine -> maat_vuln.engine.*"]
 name = "Import cli from maat_vuln.cli, not its submodules"
 type = "forbidden"
 source_modules = ["maat_vuln.*", "tests"]
-forbidden_modules = ["maat_vuln.cli.main"]
+forbidden_modules = [
+    "maat_vuln.cli.common",
+    "maat_vuln.cli.explain",
+    "maat_vuln.cli.main",
+    "maat_vuln.cli.rank",
+    "maat_vuln.cli.snapshot",
+]
 ignore_imports = ["maat_vuln.cli -> maat_vuln.cli.*"]
 
 [tool.pytest.ini_options]
