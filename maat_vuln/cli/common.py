@@ -20,6 +20,7 @@ from maat_vuln.snapshot import (
 )
 
 EXIT_ERROR = 1
+VALUE_ERROR_PREFIX = "Value error, "
 DISPLAY_TIMESTAMP = "%Y-%m-%dT%H:%M:%SZ"
 GREY = "bright_black"
 PRIORITY_STYLES = {
@@ -37,13 +38,31 @@ class OutputFormat(StrEnum):
     JSON = "json"
 
 
+def _message(error: Exception) -> str:
+    """Word an error in one line, validation errors as ``field: reason``."""
+    if not isinstance(error, ValidationError):
+        return str(error)
+    # Pydantic's own text spans lines, with its error types and doc URLs.
+    return "; ".join(
+        ": ".join(
+            part
+            for part in (
+                ".".join(str(loc) for loc in details["loc"]),
+                details["msg"].removeprefix(VALUE_ERROR_PREFIX),
+            )
+            if part
+        )
+        for details in error.errors(include_url=False)
+    )
+
+
 @contextmanager
 def fail_cleanly() -> Iterator[None]:
     """Turn expected errors into a message on stderr and exit code 1."""
     try:
         yield
     except (ValidationError, SnapshotError, FetchError) as error:
-        typer.echo(f"Error: {error}", err=True)
+        typer.echo(f"Error: {_message(error)}", err=True)
         raise typer.Exit(EXIT_ERROR) from error
 
 

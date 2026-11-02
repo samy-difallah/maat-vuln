@@ -222,3 +222,26 @@ def test_unsupported_schema_version(runner, snapshot):
     )
     assert result.exit_code == 1
     assert "unsupported schema_version 1.0.0" in result.stderr
+
+
+@pytest.mark.parametrize(
+    ("args", "stdin", "message"),
+    [
+        (
+            ["cve-list.txt"],
+            None,
+            "Error: id: malformed CVE ID CVE-LIST.TXT, expected CVE-YYYY-NNNN",
+        ),
+        (
+            ["--input", "-"],
+            json.dumps({"findings": [{"id": GHSA, "aliases": ["CVE-1"]}]}),
+            "Error: findings.0.aliases.0: malformed CVE ID CVE-1,"
+            " expected CVE-YYYY-NNNN",
+        ),
+    ],
+)
+def test_invalid_input(runner, snapshot, args, stdin, message):
+    """Invalid input fails with one line naming the field and reason."""
+    result = runner.invoke(app, ["rank", *args], input=stdin)
+    assert result.exit_code == 1
+    assert result.stderr == message + "\n"
