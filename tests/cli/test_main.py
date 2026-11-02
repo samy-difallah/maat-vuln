@@ -298,15 +298,36 @@ def explained(result):
     return {label: value for label, value in pairs}
 
 
-def test_explain_kev(runner, snapshot):
-    """A CVE in KEV is P1, with its KEV dates and the KEV feed source."""
-    fields = explained(runner.invoke(app, ["explain", IN_KEV.lower()]))
+def test_explain_kev(runner, snapshot, monkeypatch):
+    """A CVE in KEV is P1, with its KEV dates and the KEV feed source.
+
+    Fields the decision leaves empty are left out, and long values stay
+    on one line even in a narrow terminal, so they copy in one piece.
+    """
+    monkeypatch.setenv("COLUMNS", "40")
+    result = runner.invoke(app, ["explain", IN_KEV.lower()])
+    fields = explained(result)
     assert fields["ID"] == IN_KEV
     assert fields["Priority"] == "P1"
     assert fields["Rule"] == "p1.kev"
-    assert fields["KEV"].startswith("in KEV, added 2026-10-20, due 2026-10")
-    assert fields["KEV source"].startswith("https://example.org/kev.json")
+    assert fields["KEV"] == (
+        "in KEV, added 2026-10-20, due 2026-10-23, ransomware use unknown"
+    )
+    assert fields["KEV source"] == (
+        "https://example.org/kev.json, retrieved 2026-10-22T12:00:00Z"
+    )
     assert fields["Snapshot"] == snapshot.manifest.snapshot_id
+    assert re.fullmatch(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ", fields["Created"])
+    for empty in ("Component", "Thresholds"):
+        assert empty not in fields
+    # A blank line opens each block: verdict, rule, signals, provenance.
+    lines = result.stdout.splitlines()
+    assert [
+        lines[i + 1].split()[0]
+        for i, line in enumerate(lines[:-1])
+        if not line
+    ] == ["ID", "Rule", "KEV", "Snapshot"]
+    assert lines[-1] == ""
 
 
 def test_explain_signals(runner, snapshot, respx_mock):
@@ -326,9 +347,17 @@ def test_explain_unresolved(runner, snapshot):
     """A non-CVE ID is unscored: its feed signals were never computed."""
     fields = explained(runner.invoke(app, ["explain", GHSA]))
     assert fields["Priority"] == "unscored"
-    assert fields["KEV"] == "not computed"
+    assert fields["KEV"] == "not computed, no CVE ID"
     assert "unresolved_id" in fields["Flags"]
     assert "KEV source" not in fields
+
+
+def test_explain_lookup_failed(runner, snapshot, respx_mock):
+    """A failed CVSS lookup is told apart from a CVSS never computed."""
+    respx_mock.post(CVSS_LOOKUP_URL).respond(400)
+    fields = explained(runner.invoke(app, ["explain", XZ]))
+    assert fields["CVSS"] == "lookup failed, retried on the next run"
+    assert "cvss_lookup_failed" in fields["Flags"]
 
 
 def test_explain_json(runner, snapshot):

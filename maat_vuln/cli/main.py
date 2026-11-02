@@ -32,6 +32,7 @@ from maat_vuln.models import (
     EpssSignal,
     Finding,
     FindingsInput,
+    Flag,
     KevSignal,
     Report,
 )
@@ -45,7 +46,9 @@ from maat_vuln.snapshot import (
 
 EXIT_ERROR = 1
 ABSENT = "-"
-NOT_COMPUTED = "not computed"
+NOT_COMPUTED = "not computed, no CVE ID"
+LOOKUP_FAILED = "lookup failed, retried on the next run"
+SELECTED = "selected"
 NO_DATA = "no data"
 UNSCORED = "unscored"
 COLUMNS = (
@@ -260,11 +263,13 @@ def rank(
 
 
 def _describe[S](
-    signal: S | MISSING | None, describe: Callable[[S], str]
+    signal: S | MISSING | None,
+    describe: Callable[[S], str],
+    not_computed: str,
 ) -> str:
     """Describe a signal, telling not computed from looked up in vain."""
     if signal is MISSING:
-        return NOT_COMPUTED
+        return not_computed
     if signal is None:
         return NO_DATA
     return describe(signal)
@@ -274,10 +279,13 @@ def _kev(kev: KevSignal) -> str:
     """Describe a KEV status with its dates."""
     if not kev.in_kev:
         return "not in KEV"
-    ransomware = kev.known_ransomware_campaign_use
+    # CISA only tells known from unknown: it never states "no ransomware".
+    ransomware = (
+        "known" if kev.known_ransomware_campaign_use is True else "unknown"
+    )
     return (
-        f"in KEV, added {kev.date_added}, due {kev.due_date}, known"
-        f" ransomware use {'yes' if ransomware is True else 'no'}"
+        f"in KEV, added {kev.date_added}, due {kev.due_date},"
+        f" ransomware use {ransomware}"
     )
 
 
@@ -293,8 +301,17 @@ def _epss(epss: EpssSignal) -> str:
 def _cvss(cvss: CvssSignal) -> str:
     """List every CVSS value with its source, the selected one marked."""
     return "\n".join(
-        f"{value.base_score:.1f} v{value.version} {value.vector or ''}"
-        f" ({value.source}){' selected' if value == cvss.selected else ''}"
+        " ".join(
+            part
+            for part in (
+                f"{value.base_score:.1f}",
+                f"v{value.version}",
+                value.vector,
+                f"({value.source})",
+                SELECTED if value == cvss.selected else None,
+            )
+            if part
+        )
         for value in cvss.values
     )
 
@@ -302,43 +319,65 @@ def _cvss(cvss: CvssSignal) -> str:
 def _feed_source(snapshot: Snapshot, name: str) -> str:
     """Name the snapshot feed file a signal was read from."""
     feed = next(f for f in snapshot.manifest.feeds if f.name == name)
-    return f"{feed.url}, retrieved {feed.retrieved_at.isoformat()}"
+    return f"{feed.url}, retrieved {_timestamp(feed.retrieved_at)}"
 
 
 def _print_decision(decision: Decision, snapshot: Snapshot) -> None:
-    """Print a decision: its rule, then each signal and its source."""
+    """Print a decision in blocks: verdict, rule, signals, provenance."""
     explanation = decision.explanation
     signals = explanation.signals
-    lines = [
-        ("ID", decision.finding_key.id),
-        ("Component", decision.finding_key.component or ABSENT),
-        ("Priority", decision.priority or UNSCORED),
-        ("Rule", decision.rule_id),
-        ("Condition", explanation.rule),
-        (
-            "Thresholds",
-            ", ".join(f"{k} {v}" for k, v in explanation.thresholds.items())
-            or ABSENT,
-        ),
+    style = PRIORITY_STYLES.get(decision.priority or "", "")
+    verdict = [("ID", Text(decision.finding_key.id, style))]
+    if decision.finding_key.component:
+        verdict.append(("Component", Text(decision.finding_key.component)))
+    verdict.append(("Priority", Text(decision.priority or UNSCORED, style)))
+    if decision.flags:
+        verdict.append(("Flags", Text(", ".join(decision.flags), GREY)))
+    rule = [
+        ("Rule", Text(decision.rule_id)),
+        ("Condition", Text(explanation.rule)),
     ]
-    for label, signal, describe, feed in (
-        ("KEV", signals.kev, _kev, KEV_FEED_NAME),
-        ("EPSS", signals.epss, _epss, EPSS_FEED_NAME),
-        ("CVSS", signals.cvss, _cvss, None),
+    if explanation.thresholds:
+        rule.append(
+            (
+                "Thresholds",
+                Text(
+                    ", ".join(
+                        f"{k} {v}" for k, v in explanation.thresholds.items()
+                    )
+                ),
+            )
+        )
+    cvss_not_computed = (
+        LOOKUP_FAILED
+        if Flag.CVSS_LOOKUP_FAILED in decision.flags
+        else NOT_COMPUTED
+    )
+    evidence: list[tuple[str, Text]] = []
+    provenance = [
+        ("Snapshot", Text(decision.snapshot_id)),
+        ("Created", Text(_timestamp(snapshot.manifest.created_at))),
+    ]
+    for label, signal, describe, not_computed, feed in (
+        ("KEV", signals.kev, _kev, NOT_COMPUTED, KEV_FEED_NAME),
+        ("EPSS", signals.epss, _epss, NOT_COMPUTED, EPSS_FEED_NAME),
+        ("CVSS", signals.cvss, _cvss, cvss_not_computed, None),
     ):
-        lines.append((label, _describe(signal, describe)))
+        first, *rest = _describe(signal, describe, not_computed).splitlines()
+        # Further CVSS values go under the first, with no label.
+        evidence += [(label, Text(first)), *(("", Text(r)) for r in rest)]
         # A feed was searched, in vain or not, whenever its signal is set.
         if feed is not None and signal is not MISSING:
-            lines.append((f"{label} source", _feed_source(snapshot, feed)))
-    lines += [
-        ("Flags", ", ".join(decision.flags) or ABSENT),
-        ("Snapshot", decision.snapshot_id),
-        ("Created", snapshot.manifest.created_at.isoformat()),
-    ]
-    table = Table.grid(padding=(0, 2))
-    for label, value in lines:
-        table.add_row(label, Text(value))
-    Console().print(table)
+            provenance.append(
+                (f"{label} source", Text(_feed_source(snapshot, feed)))
+            )
+    blocks = (verdict, rule, evidence, provenance)
+    width = max(len(label) for block in blocks for label, _ in block) + 2
+    console = Console()
+    for block in blocks:
+        console.print()
+        _print_fields(console, block, width=width)
+    console.print()
 
 
 @app.command()
@@ -405,10 +444,17 @@ def _timestamp(moment: datetime) -> str:
 
 
 def _print_fields(
-    console: Console, fields: list[tuple[str, Text]], indent: str = ""
+    console: Console,
+    fields: list[tuple[str, Text]],
+    indent: str = "",
+    width: int | None = None,
 ) -> None:
-    """Print aligned label/value lines, one field per line."""
-    width = max(len(label) for label, _ in fields) + 2
+    """Print aligned label/value lines, one field per line.
+
+    ``width`` sets the label column, to align several blocks of fields;
+    by default it fits the longest label.
+    """
+    width = width or max(len(label) for label, _ in fields) + 2
     for label, value in fields:
         # Soft wrap: Rich never breaks a long URL, path or hash, so the
         # terminal wraps it on screen and it still copies in one piece.
