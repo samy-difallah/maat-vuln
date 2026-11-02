@@ -4,14 +4,37 @@ import re
 from collections.abc import Iterable
 from typing import Annotated, Literal, Self
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    ConfigDict,
+    Field,
+    StringConstraints,
+)
+
+CVE_PREFIX = "CVE-"
+CVE_PATTERN = re.compile(r"CVE-\d{4}-\d{4,}")
+
+
+def _check_cve(vuln_id: str) -> str:
+    """Reject an ID that claims to be a CVE but is not well-formed.
+
+    Raises:
+        ValueError: the ID starts with ``CVE-`` but is no CVE ID.
+    """
+    # A typo or a file name would otherwise pass as a non-CVE ID and
+    # come out unscored, as if the feeds had nothing on it.
+    if vuln_id.startswith(CVE_PREFIX) and not CVE_PATTERN.fullmatch(vuln_id):
+        msg = f"malformed CVE ID {vuln_id}, expected CVE-YYYY-NNNN"
+        raise ValueError(msg)
+    return vuln_id
+
 
 VulnId = Annotated[
     str,
     StringConstraints(strip_whitespace=True, to_upper=True, min_length=1),
+    AfterValidator(_check_cve),
 ]
-
-CVE_PATTERN = re.compile(r"CVE-\d{4}-\d{4,}")
 
 CvssVersion = Literal["4.0", "3.1", "3.0", "2.0"]
 CvssScore = Annotated[float, Field(ge=0, le=10)]
