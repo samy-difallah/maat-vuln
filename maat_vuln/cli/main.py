@@ -63,6 +63,8 @@ COLUMNS = (
     "Flags",
 )
 NUMERIC_COLUMNS = frozenset({"EPSS", "Pctl", "CVSS"})
+COMPONENT_COLUMN = "Component"
+WRAPPING_COLUMNS = frozenset({COMPONENT_COLUMN, "Rule", "Flags"})
 FEED_INDENT = "  "
 FETCH_STATUS = "Fetching the KEV and EPSS feeds…"
 DISPLAY_TIMESTAMP = "%Y-%m-%dT%H:%M:%SZ"
@@ -149,13 +151,13 @@ def _snapshot(snapshot_id: str | None, refresh: bool) -> Snapshot:
 
 def _table(*columns: str) -> Table:
     """Start a table with a bold header over a heavy rule, no borders."""
-    # Without vertical borders, a 2-space left padding keeps columns apart.
+    # The box's blank vertical and the right padding keep columns 2 apart.
     return Table(
         *columns,
         box=box.SIMPLE_HEAVY,
         show_edge=False,
         pad_edge=False,
-        padding=(0, 1, 0, 2),
+        padding=(0, 1, 0, 0),
         header_style="bold",
     )
 
@@ -165,7 +167,7 @@ def _cell(value: str | None, style: str = "") -> Text:
     return Text(value, style) if value else Text(ABSENT)
 
 
-def _row(decision: Decision) -> list[Text]:
+def _row(decision: Decision, with_component: bool) -> list[Text]:
     """Render one decision as a table row, coloured by its priority."""
     signals = decision.explanation.signals
     kev = signals.kev
@@ -176,7 +178,7 @@ def _row(decision: Decision) -> list[Text]:
     return [
         _cell(decision.priority, style),
         _cell(decision.finding_key.id, style),
-        _cell(decision.finding_key.component),
+        *([_cell(decision.finding_key.component)] if with_component else []),
         _cell(
             ("yes" if in_kev else "no")
             if isinstance(kev, KevSignal)
@@ -195,18 +197,27 @@ def _row(decision: Decision) -> list[Text]:
             else None
         ),
         _cell(decision.rule_id),
-        _cell(", ".join(decision.flags), GREY),
+        _cell("\n".join(decision.flags), GREY),
     ]
 
 
 def _print_table(report: Report) -> None:
     """Print the decisions as a table, then the summary and snapshot."""
-    table = _table(*COLUMNS)
+    with_component = any(d.finding_key.component for d in report.decisions)
+    table = _table(
+        *(c for c in COLUMNS if with_component or c != COMPONENT_COLUMN)
+    )
     for column in table.columns:
         if column.header in NUMERIC_COLUMNS:
             column.justify = "right"
+        # On a narrow terminal, only these columns give up width, so an
+        # ID or a score is never cut short.
+        if column.header in WRAPPING_COLUMNS:
+            column.overflow = "fold"
+        else:
+            column.no_wrap = True
     for decision in report.decisions:
-        table.add_row(*_row(decision))
+        table.add_row(*_row(decision, with_component))
     summary = Text(" · ").join(
         Text(f"{key} {count}", PRIORITY_STYLES.get(key, ""))
         for key, count in report.summary
