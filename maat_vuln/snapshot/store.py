@@ -184,15 +184,22 @@ def load_snapshot(snapshot_id: str, root: Path | None = None) -> Snapshot:
 
 
 def latest_snapshot(root: Path | None = None) -> Snapshot | None:
-    """Return the most recently created snapshot, if there is one."""
+    """Return the most recently created snapshot, if there is one.
+
+    A damaged snapshot is skipped, so it never hides the valid ones;
+    loading it by its ID still reports the damage.
+    """
     root = default_root() if root is None else root
     if not root.is_dir():
         return None
-    snapshots = [
-        load_snapshot(path.name, root)
-        for path in root.iterdir()
-        if re.fullmatch(SHA256_PATTERN, path.name)
-    ]
+    snapshots = []
+    for path in root.iterdir():
+        if not re.fullmatch(SHA256_PATTERN, path.name):
+            continue
+        try:
+            snapshots.append(load_snapshot(path.name, root))
+        except SnapshotError:
+            continue
     return max(
         snapshots,
         key=lambda snapshot: snapshot.manifest.created_at,

@@ -135,6 +135,15 @@ def test_latest_snapshot_is_newest(tmp_path):
     assert latest_snapshot(tmp_path) == newest
 
 
+def test_latest_snapshot_skips_damaged(tmp_path):
+    """A damaged snapshot, even the newest, does not hide the valid ones."""
+    valid = create_snapshot(FEEDS, root=tmp_path)
+    damaged = create_snapshot([raw_feed(content=b"[]")], root=tmp_path)
+    (damaged.path / MANIFEST_NAME).write_text("{")
+    (tmp_path / ("0" * 64)).mkdir()
+    assert latest_snapshot(tmp_path) == valid
+
+
 def test_latest_snapshot_none(tmp_path):
     """No snapshot yet, whether the root exists or not."""
     assert latest_snapshot(tmp_path / "missing") is None
