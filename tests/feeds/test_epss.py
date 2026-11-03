@@ -92,3 +92,14 @@ def test_parse_normalizes_ids_and_score_date():
     )
     signal = parse_epss(content, ["CVE-2024-0001"])["CVE-2024-0001"]
     assert signal.score_date == date(2026, 10, 22)
+
+
+def test_parse_only_validates_asked_rows():
+    """Rows of other CVEs are skipped unvalidated, so they cost nothing."""
+    content = scores(
+        HEADER + "cve,epss,percentile\n"
+        "CVE-2024-0001,0.1,0.5\n"
+        "\n"
+        "CVE-2024-0002,not-a-score,0.5\n"
+    )
+    assert parse_epss(content, ["CVE-2024-0001"]).keys() == {"CVE-2024-0001"}

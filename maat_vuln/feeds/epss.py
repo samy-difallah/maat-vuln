@@ -36,9 +36,11 @@ _ROWS = TypeAdapter(list[tuple[VulnId, Probability, Probability]])
 
 
 def _read(
-    content: bytes,
+    content: bytes, wanted: set[str] | None = None
 ) -> tuple[dict[str, str], list[tuple[str, float, float]]]:
     """Return the raw version info and the rows of the gzipped CSV.
+
+    With ``wanted``, only the rows of those CVEs are kept and validated.
 
     Raises:
         ValueError: the file is not a well-formed EPSS score file.
@@ -59,7 +61,12 @@ def _read(
     reader = csv.reader(io.StringIO(body))
     if next(reader, None) != COLUMNS:
         raise ValueError(f"columns are not {COLUMNS}")
-    return version, _ROWS.validate_python(list(reader))
+    rows = list(reader)
+    if wanted is not None:
+        # Validating every row takes seconds on each run; the whole file
+        # was validated when fetched and its hash is checked on reading.
+        rows = [r for r in rows if r and r[0].strip().upper() in wanted]
+    return version, _ROWS.validate_python(rows)
 
 
 async def fetch_epss(client: HttpClient) -> RawFeed:
@@ -91,9 +98,8 @@ def parse_epss(content: bytes, cves: Iterable[str]) -> dict[str, EpssSignal]:
     Only the asked CVEs get a signal, as building one per row of the
     feed takes seconds. A CVE missing from the mapping has no EPSS score.
     """
-    version, rows = _read(content)
+    version, rows = _read(content, set(cves))
     header = _EpssHeader.model_validate(version)
-    wanted = set(cves)
     return {
         cve: EpssSignal(
             probability=probability,
@@ -102,5 +108,4 @@ def parse_epss(content: bytes, cves: Iterable[str]) -> dict[str, EpssSignal]:
             score_date=header.score_date.date(),
         )
         for cve, probability, percentile in rows
-        if cve in wanted
     }
