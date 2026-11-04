@@ -12,9 +12,9 @@ from rich.text import Text
 from maat_vuln.cli.common import (
     GREY,
     PRIORITY_STYLES,
-    UNSCORED,
     OutputFormat,
     fail_cleanly,
+    priority_label,
     resolve_snapshot,
 )
 from maat_vuln.engine import prioritize
@@ -98,7 +98,7 @@ def _row(decision: Decision, with_component: bool) -> list[Text]:
     style = PRIORITY_STYLES.get(decision.priority or "", "")
     in_kev = isinstance(kev, KevSignal) and kev.in_kev
     return [
-        _cell(decision.priority or UNSCORED, style),
+        _cell(priority_label(decision.priority), style),
         _cell(decision.finding_key.id, style),
         *([_cell(decision.finding_key.component)] if with_component else []),
         _cell(
@@ -177,7 +177,7 @@ def rank(
         typer.Option(min=1, help="Maximum simultaneous CVSS lookups."),
     ] = DEFAULT_CONCURRENCY,
 ) -> None:
-    """Rank vulnerabilities by priority, P1 first.
+    """Rank vulnerabilities by priority, CRITICAL first.
 
     With no IDs and no --input, IDs are read from stdin, one per line.
     The latest snapshot is used unless --snapshot or --refresh is given;

@@ -2,7 +2,7 @@
 
 from datetime import UTC
 from enum import StrEnum
-from typing import Annotated, Literal
+from typing import Annotated, Literal, get_args
 
 from pydantic import AfterValidator, AwareDatetime, Field
 
@@ -10,7 +10,9 @@ from maat_vuln.models.finding import FindingKey
 from maat_vuln.models.input import SCHEMA_VERSION
 from maat_vuln.models.signals import OutputModel, Signals
 
-Priority = Literal["P1", "P2", "P3", "P4"]
+Priority = Literal["CRITICAL", "HIGH", "MEDIUM", "LOW"]
+# Most urgent first: the sort order, and P1-P4 by position.
+PRIORITIES: tuple[Priority, ...] = get_args(Priority)
 
 SHA256_PATTERN = r"^[0-9a-f]{64}$"
 
@@ -65,10 +67,10 @@ class PolicyRef(OutputModel):
 class Summary(OutputModel):
     """Number of decisions per priority, ``unscored`` for no priority."""
 
-    P1: Count
-    P2: Count
-    P3: Count
-    P4: Count
+    CRITICAL: Count
+    HIGH: Count
+    MEDIUM: Count
+    LOW: Count
     unscored: Count
 
 

@@ -29,7 +29,7 @@ def explained(result):
 
 
 def test_explain_kev(runner, snapshot, monkeypatch):
-    """A CVE in KEV is P1, with its KEV dates and the KEV feed source.
+    """A CVE in KEV is CRITICAL, with its KEV dates and the KEV feed source.
 
     Fields the decision leaves empty are left out, and long values stay
     on one line even in a narrow terminal, so they copy in one piece.
@@ -38,7 +38,7 @@ def test_explain_kev(runner, snapshot, monkeypatch):
     result = runner.invoke(app, ["explain", IN_KEV.lower()])
     fields = explained(result)
     assert fields["ID"] == IN_KEV
-    assert fields["Priority"] == "P1"
+    assert fields["Priority"] == "CRITICAL (P1)"
     assert fields["Rule"] == "p1.kev"
     assert fields["KEV"] == (
         "in KEV, added 2026-10-20, due 2026-10-23, ransomware use unknown"
@@ -109,7 +109,7 @@ def test_explain_json(runner, snapshot):
     assert result.exit_code == 0, result.output
     decision = Decision.model_validate_json(result.stdout)
     assert decision.finding_key.component == PURL
-    assert decision.priority == "P1"
+    assert decision.priority == "CRITICAL"
     assert decision.snapshot_id == snapshot_id
 
 

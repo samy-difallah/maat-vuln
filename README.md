@@ -14,7 +14,7 @@ pip install maat-vuln
 
 ## Usage
 
-Rank vulnerabilities, P1 first:
+Rank vulnerabilities, `CRITICAL` first:
 
 ```sh
 maat rank CVE-2021-44228 CVE-2023-4863
@@ -72,11 +72,11 @@ The `maat-default` v1 policy evaluates these rules in order; the first match win
 
 | Rule | Priority | Condition |
 |---|---|---|
-| `p1.kev` | P1 | in KEV |
-| `p2.epss_likely` | P2 | EPSS probability ≥ 0.10 and not CVSS < 4.0 |
-| `p3.epss_capped_low_cvss` | P3 | EPSS probability ≥ 0.10 but CVSS < 4.0 |
-| `p3.watch` | P3 | EPSS probability ≥ 0.01 or CVSS ≥ 7.0 |
-| `p4.low` | P4 | at least one signal available |
+| `p1.kev` | CRITICAL (P1) | in KEV |
+| `p2.epss_likely` | HIGH (P2) | EPSS probability ≥ 0.10 and not CVSS < 4.0 |
+| `p3.epss_capped_low_cvss` | MEDIUM (P3) | EPSS probability ≥ 0.10 but CVSS < 4.0 |
+| `p3.watch` | MEDIUM (P3) | EPSS probability ≥ 0.01 or CVSS ≥ 7.0 |
+| `p4.low` | LOW (P4) | at least one signal available |
 | `none.unscored` | none | no KEV, EPSS or CVSS data |
 
 Missing data never lowers a priority: it adds a flag such as `cvss_missing` or `epss_missing`. Within a priority, decisions are sorted by EPSS probability, then CVSS base score. CVSS comes from the input first, otherwise from [CIRCL Vulnerability-Lookup](https://vulnerability.circl.lu/). The [design document](https://github.com/samy-difallah/maat-vuln/blob/main/docs/design.md) details the data contract and the policy.

@@ -16,7 +16,7 @@ Out of scope: SBOM generation; image/secret/IaC/license scanning; host or networ
 ## 2. Key decisions
 
 1. **Unit of prioritization: vulnerability × component.** Signals (KEV, EPSS, CVSS) are resolved once per vulnerability; the Decision belongs to the finding, because VEX and context are component-specific.
-2. **Verdict: P1–P4**, sorted by EPSS probability then CVSS. No 0–100 score.
+2. **Verdict: `CRITICAL`, `HIGH`, `MEDIUM` or `LOW`**, sorted by EPSS probability then CVSS; P1–P4 is the matching indicator (`CRITICAL` is P1), shown in the table and in rule IDs. No 0–100 score.
 3. **Pivot identifier: CVE.** Aliases (GHSA, EUVD, GCVE, OSV…) are accepted and kept; when a CVE alias exists it becomes the pivot. Findings without a CVE are kept, without feed signals.
 4. **CVSS source:** values supplied in the input first, combined across every finding of the vulnerability; otherwise looked up in CIRCL Vulnerability-Lookup and cached in the snapshot. Provenance is recorded.
 5. **EPSS:** probability, percentile, model version and score date are all kept.
@@ -74,7 +74,7 @@ A snapshot is written to a temporary directory, renamed once complete. Loading o
 | Field | Notes |
 |---|---|
 | `finding_key` | as defined above |
-| `priority` | `P1`–`P4` or `null` (unscored) |
+| `priority` | `CRITICAL`, `HIGH`, `MEDIUM`, `LOW` or `null` (unscored) |
 | `rule_id` | see §4 |
 | `flags` | list, see §4 |
 | `explanation` | `rule` (condition text), `thresholds` (name → value), `signals` (the Signals object used) |
@@ -84,7 +84,7 @@ A snapshot is written to a temporary directory, renamed once complete. Loading o
 
 ### Report (output)
 
-`schema_version`, `generated_at`, `maat_version`, `policy` (id, version), `snapshot_id`, `decisions` (sorted, §4), `summary` (count per priority, every key always present: `{"P1", "P2", "P3", "P4", "unscored"}`).
+`schema_version`, `generated_at`, `maat_version`, `policy` (id, version), `snapshot_id`, `decisions` (sorted, §4), `summary` (count per priority, every key always present: `{"CRITICAL", "HIGH", "MEDIUM", "LOW", "unscored"}`).
 
 ## 4. Default policy `maat-default` v1
 
@@ -92,11 +92,11 @@ Rules, evaluated in order; the first match wins.
 
 | Rule ID | Priority | Condition |
 |---|---|---|
-| `p1.kev` | P1 | vulnerability is in KEV |
-| `p2.epss_likely` | P2 | EPSS probability ≥ 0.10 and not (CVSS < 4.0) |
-| `p3.epss_capped_low_cvss` | P3 | EPSS probability ≥ 0.10 but CVSS < 4.0 |
-| `p3.watch` | P3 | EPSS probability ≥ 0.01 or CVSS ≥ 7.0 |
-| `p4.low` | P4 | at least one signal available |
+| `p1.kev` | CRITICAL (P1) | vulnerability is in KEV |
+| `p2.epss_likely` | HIGH (P2) | EPSS probability ≥ 0.10 and not (CVSS < 4.0) |
+| `p3.epss_capped_low_cvss` | MEDIUM (P3) | EPSS probability ≥ 0.10 but CVSS < 4.0 |
+| `p3.watch` | MEDIUM (P3) | EPSS probability ≥ 0.01 or CVSS ≥ 7.0 |
+| `p4.low` | LOW (P4) | at least one signal available |
 | `none.unscored` | none | no KEV, EPSS or CVSS data |
 
 Named constants: `EPSS_LIKELY = 0.10`, `EPSS_WATCH = 0.01`, `CVSS_HIGH = 7.0`, `CVSS_LOW_CAP = 4.0`. Changing any of them increments `policy_version`.
@@ -104,12 +104,12 @@ Named constants: `EPSS_LIKELY = 0.10`, `EPSS_WATCH = 0.01`, `CVSS_HIGH = 7.0`, `
 Principles:
 
 - Thresholds use the raw EPSS **probability**, not the percentile (the percentile shifts with the score distribution; it is displayed only).
-- **Missing data never lowers a priority; it adds a flag.** If CVSS is missing, the P2 cap does not apply.
+- **Missing data never lowers a priority; it adds a flag.** If CVSS is missing, the `HIGH` cap does not apply.
 - A signal is available when the vulnerability is in KEV, has an EPSS probability or has a CVSS value; `in_kev: false` alone is not a signal, so a CVE with nothing else is unscored.
 - Flags, one per missing signal, listed in this order: `cvss_missing` (no CVSS, for any reason but a failed lookup), `cvss_lookup_failed` (CVSS absent on a CVE pivot, see §6), `epss_missing` (EPSS `null` or absent), `cvss_legacy` (selected CVSS is 2.0), `unresolved_id` (no CVE pivot), `unscored` (no priority).
 - `explanation.thresholds` holds the thresholds of the matched rule, keyed by their constant names (`EPSS_LIKELY`, …).
 
-Sort order of decisions: priority (P1 → P4, unscored last), then EPSS probability descending, then selected CVSS base score descending, then finding key ascending.
+Sort order of decisions: priority (`CRITICAL` → `LOW`, unscored last), then EPSS probability descending, then selected CVSS base score descending, then finding key ascending.
 
 ## 5. Core features
 
@@ -147,7 +147,7 @@ Short term (committed):
 
 - **v0.1** Reproducible core: the core features of §5.
 - **v0.2** SCA inputs: adapter architecture (entry points) with auto-detection; CycloneDX (incl. VDR, which covers Dependency-Track exports), Trivy, Grype, OSV-Scanner; multi-source merge with provenance. Scanner severities ignored.
-- **v0.3** Outputs and CI: SARIF, Markdown, enriched CycloneDX; `--fail-on P1|P2…`; GitHub Action.
+- **v0.3** Outputs and CI: SARIF, Markdown, enriched CycloneDX; `--fail-on CRITICAL|HIGH…`; GitHub Action.
 
 Medium term (planned, adjustable):
 
