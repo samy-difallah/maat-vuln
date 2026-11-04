@@ -2,6 +2,17 @@
 
 All notable changes to this project are documented in this file.
 
+## 0.1.2 - 2026-11-04
+
+### Refactoring
+
+- **policy**: Name priorities CRITICAL to LOW, with P1-P4 as indicators (#30); this changes the JSON output: `priority` values and `summary` keys are now `CRITICAL`, `HIGH`, `MEDIUM` and `LOW` instead of `P1` to `P4`, and `schema_version` is `0.2.0`
+
+### Documentation
+
+- **readme**: Replace the title with a centered Maat logo and add badges (#29)
+- **readme**: Describe v0.1 verdicts as CRITICAL to LOW in the roadmap (#31)
+
 ## 0.1.1 - 2026-11-03
 
 ### Bug fixes
