@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 128" width="64" height="128" role="img" aria-label="Maat feather">
+  <path fill="#c9972b" d="M40 106C26 92 16 64 18 40C20 20 34 7 50 8C57 9 61 14 59 21C56 16 50 15 47 19C43 25 42 42 42 62L42 106Z"/>
+  <g fill="none" stroke="#8a6418" stroke-linecap="round">
+    <path stroke-width="2.5" d="M41 124L41 104C41 70 42 40 45 24C47 16 52 13 57 16"/>
+    <path stroke-width="1.5" d="M40 94L31 84M40 80L26 68M40 66L24 52M41 52L25 38M42 38L30 26"/>
+  </g>
+</svg>

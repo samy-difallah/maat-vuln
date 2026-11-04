@@ -1,3 +1,5 @@
+<img src="https://raw.githubusercontent.com/samy-difallah/maat-vuln/main/docs/assets/maat.svg" alt="Maat feather" height="96">
+
 # Maat
 
 Exploitation-driven vulnerability prioritization, as a Python library with a thin CLI on top. Maat ranks vulnerabilities with [CISA KEV](https://www.cisa.gov/known-exploited-vulnerabilities-catalog) and [FIRST EPSS](https://www.first.org/epss/), with CVSS as a secondary signal. Every verdict comes from a named rule, is explained, and is tied to a dated, hashed snapshot of the feeds.
