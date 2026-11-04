@@ -23,7 +23,7 @@ SNAPSHOT_ID = "a" * 64
 
 DECISION = Decision(
     finding_key=FindingKey(id="CVE-2024-0001", component=None),
-    priority="P1",
+    priority="CRITICAL",
     rule_id="p1.kev",
     flags=[Flag.EPSS_MISSING],
     explanation=Explanation(
@@ -36,7 +36,7 @@ DECISION = Decision(
     snapshot_id=SNAPSHOT_ID,
 )
 
-SUMMARY = Summary(P1=1, P2=0, P3=0, P4=0, unscored=0)
+SUMMARY = Summary(CRITICAL=1, HIGH=0, MEDIUM=0, LOW=0, unscored=0)
 
 
 def make_report(**overrides):
@@ -103,4 +103,4 @@ def test_unscored_decision_has_null_priority():
 def test_summary_needs_every_priority():
     """Summary keys are fixed, zero counts included."""
     with pytest.raises(ValidationError):
-        Summary.model_validate({"P1": 1})
+        Summary.model_validate({"CRITICAL": 1})

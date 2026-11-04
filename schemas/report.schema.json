@@ -84,10 +84,10 @@
           "anyOf": [
             {
               "enum": [
-                "P1",
-                "P2",
-                "P3",
-                "P4"
+                "CRITICAL",
+                "HIGH",
+                "MEDIUM",
+                "LOW"
               ],
               "type": "string"
             },
@@ -323,24 +323,24 @@
       "additionalProperties": false,
       "description": "Number of decisions per priority, ``unscored`` for no priority.",
       "properties": {
-        "P1": {
+        "CRITICAL": {
           "minimum": 0,
-          "title": "P1",
+          "title": "Critical",
           "type": "integer"
         },
-        "P2": {
+        "HIGH": {
           "minimum": 0,
-          "title": "P2",
+          "title": "High",
           "type": "integer"
         },
-        "P3": {
+        "MEDIUM": {
           "minimum": 0,
-          "title": "P3",
+          "title": "Medium",
           "type": "integer"
         },
-        "P4": {
+        "LOW": {
           "minimum": 0,
-          "title": "P4",
+          "title": "Low",
           "type": "integer"
         },
         "unscored": {
@@ -350,10 +350,10 @@
         }
       },
       "required": [
-        "P1",
-        "P2",
-        "P3",
-        "P4",
+        "CRITICAL",
+        "HIGH",
+        "MEDIUM",
+        "LOW",
         "unscored"
       ],
       "title": "Summary",
@@ -364,7 +364,7 @@
   "description": "Top-level output document: sorted decisions and their summary.",
   "properties": {
     "schema_version": {
-      "default": "0.1.0",
+      "default": "0.2.0",
       "title": "Schema Version",
       "type": "string"
     },

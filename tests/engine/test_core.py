@@ -103,10 +103,10 @@ async def test_end_to_end(snapshot, respx_mock):
         (d.finding_key.id, d.priority, d.rule_id, d.flags)
         for d in report.decisions
     ] == [
-        (IN_KEV, "P1", "p1.kev", [Flag.EPSS_MISSING]),
-        (LOG4SHELL, "P2", "p2.epss_likely", []),
-        (XZ, "P2", "p2.epss_likely", []),
-        (DROWN, "P4", "p4.low", [Flag.EPSS_MISSING]),
+        (IN_KEV, "CRITICAL", "p1.kev", [Flag.EPSS_MISSING]),
+        (LOG4SHELL, "HIGH", "p2.epss_likely", []),
+        (XZ, "HIGH", "p2.epss_likely", []),
+        (DROWN, "LOW", "p4.low", [Flag.EPSS_MISSING]),
         (
             NO_CVSS,
             None,
@@ -134,10 +134,10 @@ async def test_end_to_end(snapshot, respx_mock):
     assert signals[NO_CVSS].kev.in_kev is False
     assert signals[GHSA].kev is MISSING
     assert report.summary.model_dump() == {
-        "P1": 1,
-        "P2": 2,
-        "P3": 0,
-        "P4": 1,
+        "CRITICAL": 1,
+        "HIGH": 2,
+        "MEDIUM": 0,
+        "LOW": 1,
         "unscored": 2,
     }
     snapshot_id = snapshot.manifest.snapshot_id
@@ -164,7 +164,7 @@ async def test_failed_lookup_is_flagged_not_cached(snapshot, respx_mock):
     decision = report.decisions[0]
     assert decision.explanation.signals.cvss is MISSING
     assert decision.flags == [Flag.CVSS_LOOKUP_FAILED]
-    assert decision.priority == "P2"
+    assert decision.priority == "HIGH"
     assert read_cvss(snapshot) == {}
 
 
@@ -211,7 +211,7 @@ async def test_missing_feed(tmp_path):
 def test_prioritize_sync(snapshot):
     """The sync facade runs the engine without an event loop."""
     report = prioritize([finding(IN_KEV, cvss=[9.8])], snapshot)
-    assert report.summary.P1 == 1
+    assert report.summary.CRITICAL == 1
 
 
 async def test_prioritize_in_running_loop(snapshot):

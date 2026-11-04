@@ -7,6 +7,7 @@ from pydantic import MISSING
 
 from maat_vuln.models import (
     CVE_PATTERN,
+    PRIORITIES,
     CvssSignal,
     CvssValue,
     Decision,
@@ -65,14 +66,14 @@ class Rule:
 
 P1_KEV = Rule(
     id="p1.kev",
-    priority="P1",
+    priority="CRITICAL",
     condition="vulnerability is in KEV",
     thresholds={},
     matches=lambda kev, epss, cvss: kev,
 )
 P2_EPSS_LIKELY = Rule(
     id="p2.epss_likely",
-    priority="P2",
+    priority="HIGH",
     condition=(
         f"EPSS probability ≥ {EPSS_LIKELY:.2f}"
         f" and not (CVSS < {CVSS_LOW_CAP:.1f})"
@@ -87,7 +88,7 @@ P2_EPSS_LIKELY = Rule(
 )
 P3_EPSS_CAPPED_LOW_CVSS = Rule(
     id="p3.epss_capped_low_cvss",
-    priority="P3",
+    priority="MEDIUM",
     condition=(
         f"EPSS probability ≥ {EPSS_LIKELY:.2f} but CVSS < {CVSS_LOW_CAP:.1f}"
     ),
@@ -101,7 +102,7 @@ P3_EPSS_CAPPED_LOW_CVSS = Rule(
 )
 P3_WATCH = Rule(
     id="p3.watch",
-    priority="P3",
+    priority="MEDIUM",
     condition=(
         f"EPSS probability ≥ {EPSS_WATCH:.2f} or CVSS ≥ {CVSS_HIGH:.1f}"
     ),
@@ -113,7 +114,7 @@ P3_WATCH = Rule(
 )
 P4_LOW = Rule(
     id="p4.low",
-    priority="P4",
+    priority="LOW",
     condition="at least one signal available",
     thresholds={},
     matches=lambda kev, epss, cvss: (
@@ -206,15 +207,18 @@ def decide(
 
 def _sort_key(
     decision: Decision,
-) -> tuple[bool, str, float, float, str, bool, str]:
+) -> tuple[int, float, float, str, bool, str]:
     """Priority, then EPSS and CVSS descending, then finding key."""
     signals = decision.explanation.signals
     epss = _epss(signals)
     cvss = _cvss(signals)
     key = decision.finding_key
     return (
-        decision.priority is None,
-        decision.priority or "",
+        (
+            PRIORITIES.index(decision.priority)
+            if decision.priority
+            else len(PRIORITIES)
+        ),
         -epss.probability if epss else 1,
         -cvss.base_score if cvss else 1,
         key.id,

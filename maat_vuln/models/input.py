@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from maat_vuln.models.finding import Finding
 
-SCHEMA_VERSION = "0.1.0"
+SCHEMA_VERSION = "0.2.0"
 
 SEMVER_PATTERN = r"^\d+\.\d+\.\d+$"
 

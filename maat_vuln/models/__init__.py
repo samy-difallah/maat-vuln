@@ -14,6 +14,7 @@ from maat_vuln.models.finding import (
 )
 from maat_vuln.models.input import SCHEMA_VERSION, FindingsInput
 from maat_vuln.models.report import (
+    PRIORITIES,
     SHA256_PATTERN,
     Decision,
     Explanation,
@@ -37,6 +38,7 @@ from maat_vuln.models.signals import (
 
 __all__ = [
     "CVE_PATTERN",
+    "PRIORITIES",
     "SCHEMA_VERSION",
     "SHA256_PATTERN",
     "Component",

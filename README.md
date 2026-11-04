@@ -1,6 +1,6 @@
-<img src="https://raw.githubusercontent.com/samy-difallah/maat-vuln/main/docs/assets/maat.svg" alt="Maat feather" height="96">
+<h1 align="center"><img src="https://raw.githubusercontent.com/samy-difallah/maat-vuln/main/docs/assets/maat.svg" alt="Maat" height="128"></h1>
 
-# Maat
+<p align="center"><a href="https://pypi.org/project/maat-vuln/"><img src="https://img.shields.io/pypi/v/maat-vuln" alt="PyPI version"></a> <a href="https://pypi.org/project/maat-vuln/"><img src="https://img.shields.io/pypi/pyversions/maat-vuln" alt="Python versions"></a> <a href="https://github.com/samy-difallah/maat-vuln/actions/workflows/ci.yml?query=branch%3Amain"><img src="https://github.com/samy-difallah/maat-vuln/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI status"></a> <a href="https://github.com/samy-difallah/maat-vuln/blob/main/LICENSE"><img src="https://img.shields.io/github/license/samy-difallah/maat-vuln" alt="License"></a></p>
 
 Exploitation-driven vulnerability prioritization, as a Python library with a thin CLI on top. Maat ranks vulnerabilities with [CISA KEV](https://www.cisa.gov/known-exploited-vulnerabilities-catalog) and [FIRST EPSS](https://www.first.org/epss/), with CVSS as a secondary signal. Every verdict comes from a named rule, is explained, and is tied to a dated, hashed snapshot of the feeds.
 
@@ -14,7 +14,7 @@ pip install maat-vuln
 
 ## Usage
 
-Rank vulnerabilities, P1 first:
+Rank vulnerabilities, `CRITICAL` first:
 
 ```sh
 maat rank CVE-2021-44228 CVE-2023-4863
@@ -72,18 +72,18 @@ The `maat-default` v1 policy evaluates these rules in order; the first match win
 
 | Rule | Priority | Condition |
 |---|---|---|
-| `p1.kev` | P1 | in KEV |
-| `p2.epss_likely` | P2 | EPSS probability ≥ 0.10 and not CVSS < 4.0 |
-| `p3.epss_capped_low_cvss` | P3 | EPSS probability ≥ 0.10 but CVSS < 4.0 |
-| `p3.watch` | P3 | EPSS probability ≥ 0.01 or CVSS ≥ 7.0 |
-| `p4.low` | P4 | at least one signal available |
+| `p1.kev` | CRITICAL (P1) | in KEV |
+| `p2.epss_likely` | HIGH (P2) | EPSS probability ≥ 0.10 and not CVSS < 4.0 |
+| `p3.epss_capped_low_cvss` | MEDIUM (P3) | EPSS probability ≥ 0.10 but CVSS < 4.0 |
+| `p3.watch` | MEDIUM (P3) | EPSS probability ≥ 0.01 or CVSS ≥ 7.0 |
+| `p4.low` | LOW (P4) | at least one signal available |
 | `none.unscored` | none | no KEV, EPSS or CVSS data |
 
 Missing data never lowers a priority: it adds a flag such as `cvss_missing` or `epss_missing`. Within a priority, decisions are sorted by EPSS probability, then CVSS base score. CVSS comes from the input first, otherwise from [CIRCL Vulnerability-Lookup](https://vulnerability.circl.lu/). The [design document](https://github.com/samy-difallah/maat-vuln/blob/main/docs/design.md) details the data contract and the policy.
 
 ## Roadmap
 
-- **v0.1** (released): reproducible core. P1–P4 verdicts from KEV, EPSS and CVSS with an explanation for each, dated and hashed feed snapshots, table and JSON output, CLI and Python library.
+- **v0.1** (released): reproducible core. CRITICAL to LOW verdicts from KEV, EPSS and CVSS with an explanation for each, dated and hashed feed snapshots, table and JSON output, CLI and Python library.
 - **v0.2** (planned): SCA inputs. CycloneDX (including VDR), Trivy, Grype and OSV-Scanner, with multi-source merge and provenance.
 - **v0.3** (planned): outputs and CI. SARIF, Markdown and enriched CycloneDX output, a `--fail-on` threshold and a GitHub Action.
 - **Later**: VEX support (v0.4) and policies as code (v0.5).
