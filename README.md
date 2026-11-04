@@ -83,7 +83,7 @@ Missing data never lowers a priority: it adds a flag such as `cvss_missing` or `
 
 ## Roadmap
 
-- **v0.1** (released): reproducible core. P1–P4 verdicts from KEV, EPSS and CVSS with an explanation for each, dated and hashed feed snapshots, table and JSON output, CLI and Python library.
+- **v0.1** (released): reproducible core. CRITICAL to LOW verdicts from KEV, EPSS and CVSS with an explanation for each, dated and hashed feed snapshots, table and JSON output, CLI and Python library.
 - **v0.2** (planned): SCA inputs. CycloneDX (including VDR), Trivy, Grype and OSV-Scanner, with multi-source merge and provenance.
 - **v0.3** (planned): outputs and CI. SARIF, Markdown and enriched CycloneDX output, a `--fail-on` threshold and a GitHub Action.
 - **Later**: VEX support (v0.4) and policies as code (v0.5).
