@@ -11,10 +11,10 @@ from rich.text import Text
 from maat_vuln.cli.common import (
     GREY,
     PRIORITY_STYLES,
-    UNSCORED,
     OutputFormat,
     fail_cleanly,
     print_fields,
+    priority_label,
     resolve_snapshot,
     timestamp,
 )
@@ -105,7 +105,9 @@ def _print_decision(decision: Decision, snapshot: Snapshot) -> None:
     verdict = [("ID", Text(decision.finding_key.id, style))]
     if decision.finding_key.component:
         verdict.append(("Component", Text(decision.finding_key.component)))
-    verdict.append(("Priority", Text(decision.priority or UNSCORED, style)))
+    verdict.append(
+        ("Priority", Text(priority_label(decision.priority), style))
+    )
     if decision.flags:
         verdict.append(("Flags", Text(", ".join(decision.flags), GREY)))
     rule = [

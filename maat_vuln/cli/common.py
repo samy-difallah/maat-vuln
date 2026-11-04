@@ -12,6 +12,7 @@ from rich.text import Text
 
 from maat_vuln.engine import fetch_snapshot
 from maat_vuln.feeds import FetchError
+from maat_vuln.models import PRIORITIES, Priority
 from maat_vuln.snapshot import (
     Snapshot,
     SnapshotError,
@@ -24,10 +25,10 @@ VALUE_ERROR_PREFIX = "Value error, "
 DISPLAY_TIMESTAMP = "%Y-%m-%dT%H:%M:%SZ"
 GREY = "bright_black"
 PRIORITY_STYLES = {
-    "P1": "bold red",
-    "P2": "dark_orange",
-    "P3": "yellow",
-    "P4": "cyan",
+    "CRITICAL": "bold red",
+    "HIGH": "dark_orange",
+    "MEDIUM": "yellow",
+    "LOW": "cyan",
 }
 UNSCORED = "unscored"
 
@@ -84,6 +85,13 @@ def resolve_snapshot(snapshot_id: str | None, refresh: bool) -> Snapshot:
     if not refresh and (snapshot := latest_snapshot()) is not None:
         return snapshot
     return fetch_snapshot()
+
+
+def priority_label(priority: Priority | None) -> str:
+    """Name a priority with its P1-P4 indicator, e.g. ``CRITICAL (P1)``."""
+    if priority is None:
+        return UNSCORED
+    return f"{priority} (P{PRIORITIES.index(priority) + 1})"
 
 
 def timestamp(moment: datetime) -> str:

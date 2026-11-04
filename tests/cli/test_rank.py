@@ -51,7 +51,7 @@ def test_table(runner, snapshot, respx_mock, cvss_answer):
     assert result.exit_code == 0, result.output
     lines = result.stdout.splitlines()
     xz_row = next(line for line in lines if XZ in line)
-    assert "P2" in xz_row
+    assert "HIGH (P2)" in xz_row
     assert "p2.epss_likely" in xz_row
     assert "0.90900" in xz_row
     ghsa_row = next(line for line in lines if GHSA in line)
@@ -69,7 +69,9 @@ def test_table(runner, snapshot, respx_mock, cvss_answer):
     assert lines.index(xz_row) < ghsa
     # No finding has a component: the column is left out.
     assert "Component" not in result.stdout
-    summary = lines.index("P1 0 · P2 1 · P3 0 · P4 0 · unscored 1")
+    summary = lines.index(
+        "CRITICAL 0 · HIGH 1 · MEDIUM 0 · LOW 0 · unscored 1"
+    )
     assert lines[summary + 2] == f"snapshot {snapshot.manifest.snapshot_id}"
     # Blank lines frame the output and set the summary apart.
     assert lines[0] == lines[summary - 1] == lines[summary + 1] == ""
@@ -93,21 +95,21 @@ def test_table_narrow(runner, snapshot, respx_mock, cvss_answer, monkeypatch):
 
 
 def test_table_colours(runner, snapshot, monkeypatch):
-    """A terminal shows P1 in bold red, in the row and the summary."""
+    """A terminal shows CRITICAL in bold red, in the row and the summary."""
     monkeypatch.setenv("FORCE_COLOR", "1")
     result = runner.invoke(
         app, ["rank", "--input", "-"], input=IN_KEV_DOCUMENT
     )
     assert result.exit_code == 0, result.output
     assert f"\x1b[1;31m{IN_KEV}" in result.stdout
-    assert "\x1b[1;31mP1 1\x1b[0m" in result.stdout
+    assert "\x1b[1;31mCRITICAL 1\x1b[0m" in result.stdout
 
 
 def test_json(runner, snapshot, respx_mock, cvss_answer):
     """--format json prints the report alone on stdout."""
     respx_mock.post(CVSS_LOOKUP_URL).respond(200, json=cvss_answer)
     result = runner.invoke(app, ["rank", "--format", "json", GHSA, XZ])
-    assert ranked(result) == [(XZ, "P2"), (GHSA, None)]
+    assert ranked(result) == [(XZ, "HIGH"), (GHSA, None)]
     report = Report.model_validate_json(result.stdout)
     assert report.snapshot_id == snapshot.manifest.snapshot_id
 
@@ -119,7 +121,7 @@ def test_input_file_with_arguments(runner, snapshot, tmp_path):
     result = runner.invoke(
         app, ["rank", "--format", "json", "--input", str(path), GHSA]
     )
-    assert ranked(result) == [(IN_KEV, "P1"), (GHSA, None)]
+    assert ranked(result) == [(IN_KEV, "CRITICAL"), (GHSA, None)]
 
 
 def test_input_stdin(runner, snapshot):
@@ -129,7 +131,7 @@ def test_input_stdin(runner, snapshot):
         ["rank", "--format", "json", "--input", "-"],
         input=IN_KEV_DOCUMENT,
     )
-    assert ranked(result) == [(IN_KEV, "P1")]
+    assert ranked(result) == [(IN_KEV, "CRITICAL")]
 
 
 def test_stdin_lines(runner, snapshot, respx_mock, cvss_answer):
@@ -140,7 +142,7 @@ def test_stdin_lines(runner, snapshot, respx_mock, cvss_answer):
         ["rank", "--format", "json"],
         input=f"\n{XZ}\n  \n{GHSA.lower()}\n",
     )
-    assert ranked(result) == [(XZ, "P2"), (GHSA, None)]
+    assert ranked(result) == [(XZ, "HIGH"), (GHSA, None)]
 
 
 def test_nothing_to_rank(runner, snapshot, monkeypatch):
