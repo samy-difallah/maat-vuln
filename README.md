@@ -1,6 +1,6 @@
-<img src="https://raw.githubusercontent.com/samy-difallah/maat-vuln/main/docs/assets/maat.svg" alt="Maat feather" height="96">
+<h1 align="center"><img src="https://raw.githubusercontent.com/samy-difallah/maat-vuln/main/docs/assets/maat.svg" alt="Maat" height="128"></h1>
 
-# Maat
+<p align="center"><a href="https://pypi.org/project/maat-vuln/"><img src="https://img.shields.io/pypi/v/maat-vuln" alt="PyPI version"></a> <a href="https://pypi.org/project/maat-vuln/"><img src="https://img.shields.io/pypi/pyversions/maat-vuln" alt="Python versions"></a> <a href="https://github.com/samy-difallah/maat-vuln/actions/workflows/ci.yml?query=branch%3Amain"><img src="https://github.com/samy-difallah/maat-vuln/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI status"></a> <a href="https://github.com/samy-difallah/maat-vuln/blob/main/LICENSE"><img src="https://img.shields.io/github/license/samy-difallah/maat-vuln" alt="License"></a></p>
 
 Exploitation-driven vulnerability prioritization, as a Python library with a thin CLI on top. Maat ranks vulnerabilities with [CISA KEV](https://www.cisa.gov/known-exploited-vulnerabilities-catalog) and [FIRST EPSS](https://www.first.org/epss/), with CVSS as a secondary signal. Every verdict comes from a named rule, is explained, and is tied to a dated, hashed snapshot of the feeds.
 
