@@ -244,7 +244,7 @@ def test_unsupported_schema_version(runner, snapshot):
         (
             ["--input", "-"],
             json.dumps({"matches": []}),
-            "Error: unrecognized input format, supported: maat",
+            "Error: unrecognized input format, supported: cyclonedx, maat",
         ),
         (
             ["--input", "-"],

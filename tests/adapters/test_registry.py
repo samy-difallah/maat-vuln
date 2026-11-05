@@ -55,7 +55,7 @@ def test_load_findings_native():
 
 def test_unrecognized_format():
     """A document no adapter recognizes names the supported formats."""
-    with pytest.raises(FormatError, match="supported: maat"):
+    with pytest.raises(FormatError, match="supported: cyclonedx, maat"):
         load_findings({"matches": []})
 
 
