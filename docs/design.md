@@ -139,14 +139,31 @@ KEV and EPSS are fetched as full feed files, one request each. The only per-vuln
 - **Bulk access first**: before implementing per-CVE lookups, check whether Vulnerability-Lookup offers a batch endpoint or downloadable dumps; prefer them when they exist. It does: CVSS is looked up through its bulk endpoint (`POST /api/vulnerability/bulk`, at most 100 IDs per request), reading for each CVE both its CVE record (`CVE-…`: CNA and ADP metrics) and its NVD record (`fkie_cve-…`), so 50 CVEs per request. Every value of both records is kept, exact duplicates once; a failed request fails the lookup of its whole batch.
 - The CLI stays synchronous and calls the sync facade.
 
-## 7. Roadmap
+## 7. SCA inputs
+
+Findings can also come from the JSON output of SCA tools. An adapter turns a document of one format into findings; past the adapters, nothing knows where a finding came from but its `sources`.
+
+- **Formats**: native (`maat`, §3), CycloneDX (`cyclonedx`: BOMs with `vulnerabilities`, VDR included, which covers Dependency-Track exports), Trivy (`trivy`), Grype (`grype`), OSV-Scanner (`osv-scanner`). JSON only: CycloneDX XML is not read.
+- **Adapter**: an object with `name`, `detect(document) -> bool` and `parse(document) -> list[Finding]`, where `document` is the parsed JSON. Adapters make no network request.
+- **Registration**: adapters are found through the entry-point group `maat_vuln.adapters`. Every built-in adapter, the native one included, has its own entry point pointing to its own module (`maat_vuln.adapters.<module>:ADAPTER`), so other packages add formats the same way.
+- **Auto-detection**: each adapter recognizes its format by its top-level structure. A document must match exactly one adapter: no match is an error listing the supported formats, several matches an error naming them. No option overrides detection.
+- **Identifiers**: the vulnerability ID reported by the tool becomes `id`, its related IDs become `aliases`; the pivot rule of §3 then applies.
+- **Component**: the purl reported by the tool; otherwise its name and version.
+- **CVSS**: CVSS values reported by the tool become `CvssInput`, hence `source: input` in Signals. A value without a base score (a bare vector) is dropped, and the Vulnerability-Lookup fallback (§6) applies when no other finding of the vulnerability carries CVSS. **Provisional:** if too many values are lost this way, `base_score` becomes optional instead.
+- **Severities**: severity labels assigned by the tools are ignored; only CVSS values are used.
+- **Provenance**: each finding gets one `sources` entry: `tool` and `tool_version` as the document records them (the adapter name when it names no tool), `original_id` the vulnerability ID as the tool reported it. Native documents carry their own `sources`.
+- **Multi-source merge**: several documents, in any formats, combine in one run; their findings are merged as in §3, so sources accumulate.
+- **CLI**: `maat rank --input` accepts a document in any supported format and may be repeated; `-` (stdin) at most once.
+- **Library**: `maat_vuln.load_findings(document) -> list[Finding]` detects the format of a parsed JSON document and parses it.
+
+## 8. Roadmap
 
 Each milestone `v0.N` is the `0.N.x` release series: its features ship together in `0.N.0`, and later `0.N.x` releases only carry fixes.
 
 Short term (committed):
 
 - **v0.1** Reproducible core: the core features of §5.
-- **v0.2** SCA inputs: adapter architecture (entry points) with auto-detection; CycloneDX (incl. VDR, which covers Dependency-Track exports), Trivy, Grype, OSV-Scanner; multi-source merge with provenance. Scanner severities ignored.
+- **v0.2** SCA inputs: adapter architecture (entry points) with auto-detection; CycloneDX (incl. VDR, which covers Dependency-Track exports), Trivy, Grype, OSV-Scanner; multi-source merge with provenance. Scanner severities ignored. See §7.
 - **v0.3** Outputs and CI: SARIF, Markdown, enriched CycloneDX; `--fail-on CRITICAL|HIGH…`; GitHub Action.
 
 Medium term (planned, adjustable):
