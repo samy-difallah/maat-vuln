@@ -1,5 +1,6 @@
 """Pieces shared by the commands: options, error handling and display."""
 
+import json
 from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import UTC, datetime
@@ -10,6 +11,7 @@ from pydantic import ValidationError
 from rich.console import Console
 from rich.text import Text
 
+from maat_vuln.adapters import FormatError
 from maat_vuln.engine import fetch_snapshot
 from maat_vuln.feeds import FetchError
 from maat_vuln.models import PRIORITIES, Priority
@@ -42,6 +44,8 @@ class OutputFormat(StrEnum):
 
 def _message(error: Exception) -> str:
     """Word an error in one line, validation errors as ``field: reason``."""
+    if isinstance(error, json.JSONDecodeError):
+        return f"invalid JSON input: {error}"
     if not isinstance(error, ValidationError):
         return str(error)
     # Pydantic's own text spans lines, with its error types and doc URLs.
@@ -63,7 +67,13 @@ def fail_cleanly() -> Iterator[None]:
     """Turn expected errors into a message on stderr and exit code 1."""
     try:
         yield
-    except (ValidationError, SnapshotError, FetchError) as error:
+    except (
+        ValidationError,
+        SnapshotError,
+        FetchError,
+        FormatError,
+        json.JSONDecodeError,
+    ) as error:
         typer.echo(f"Error: {_message(error)}", err=True)
         raise typer.Exit(EXIT_ERROR) from error
 

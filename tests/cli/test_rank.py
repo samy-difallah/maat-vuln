@@ -241,6 +241,17 @@ def test_unsupported_schema_version(runner, snapshot):
             "Error: findings.0.aliases.0: malformed CVE ID CVE-1,"
             " expected CVE-YYYY-NNNN",
         ),
+        (
+            ["--input", "-"],
+            json.dumps({"matches": []}),
+            "Error: unrecognized input format, supported: maat",
+        ),
+        (
+            ["--input", "-"],
+            "CVE-2024-0001",
+            "Error: invalid JSON input: Expecting value:"
+            " line 1 column 1 (char 0)",
+        ),
     ],
 )
 def test_invalid_input(runner, snapshot, args, stdin, message):
