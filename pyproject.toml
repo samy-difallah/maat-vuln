@@ -52,6 +52,7 @@ dev = ["maat-vuln[test,lint,release]"]
 maat = "maat_vuln.cli:app"
 
 [project.entry-points."maat_vuln.adapters"]
+cyclonedx = "maat_vuln.adapters.cyclonedx:ADAPTER"
 maat = "maat_vuln.adapters.native:ADAPTER"
 
 [project.urls]
@@ -147,6 +148,7 @@ name = "Import adapters from maat_vuln.adapters, not its submodules"
 type = "forbidden"
 source_modules = ["maat_vuln.*", "tests"]
 forbidden_modules = [
+    "maat_vuln.adapters.cyclonedx",
     "maat_vuln.adapters.native",
     "maat_vuln.adapters.registry",
 ]
