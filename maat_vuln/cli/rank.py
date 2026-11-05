@@ -1,5 +1,6 @@
 """``maat rank``: rank vulnerabilities by priority, as a table or JSON."""
 
+import json
 import sys
 from typing import Annotated
 
@@ -9,6 +10,7 @@ from rich.console import Console
 from rich.table import Table
 from rich.text import Text
 
+from maat_vuln.adapters import load_findings
 from maat_vuln.cli.common import (
     GREY,
     PRIORITY_STYLES,
@@ -24,7 +26,6 @@ from maat_vuln.models import (
     Decision,
     EpssSignal,
     Finding,
-    FindingsInput,
     KevSignal,
     Report,
 )
@@ -53,11 +54,13 @@ def _read_findings(
 
     Raises:
         typer.BadParameter: nothing given and stdin is a terminal.
-        ValidationError: an ID or the JSON document is invalid.
+        JSONDecodeError: the input document is not JSON.
+        FormatError: the input document is in no supported format.
+        ValidationError: an ID or the input document is invalid.
     """
     findings = [Finding(id=vuln_id) for vuln_id in ids]
     if document is not None:
-        findings += FindingsInput.model_validate_json(document.read()).findings
+        findings += load_findings(json.loads(document.read()))
     elif not ids:
         if sys.stdin.isatty():
             raise typer.BadParameter(
@@ -159,7 +162,10 @@ def rank(
     ] = None,
     document: Annotated[
         typer.FileText | None,
-        typer.Option("--input", help="JSON input document, '-' for stdin."),
+        typer.Option(
+            "--input",
+            help="JSON input document in a supported format, '-' for stdin.",
+        ),
     ] = None,
     output: Annotated[
         OutputFormat, typer.Option("--format", help="Output format.")
