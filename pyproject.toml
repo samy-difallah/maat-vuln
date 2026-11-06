@@ -54,6 +54,7 @@ maat = "maat_vuln.cli:app"
 [project.entry-points."maat_vuln.adapters"]
 cyclonedx = "maat_vuln.adapters.cyclonedx:ADAPTER"
 maat = "maat_vuln.adapters.native:ADAPTER"
+trivy = "maat_vuln.adapters.trivy:ADAPTER"
 
 [project.urls]
 Repository = "https://github.com/samy-difallah/maat-vuln"
@@ -151,6 +152,7 @@ forbidden_modules = [
     "maat_vuln.adapters.cyclonedx",
     "maat_vuln.adapters.native",
     "maat_vuln.adapters.registry",
+    "maat_vuln.adapters.trivy",
 ]
 ignore_imports = ["maat_vuln.adapters -> maat_vuln.adapters.*"]
 
