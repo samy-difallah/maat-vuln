@@ -55,8 +55,10 @@ def test_load_findings_native():
 
 def test_unrecognized_format():
     """A document no adapter recognizes names the supported formats."""
-    with pytest.raises(FormatError, match="supported: cyclonedx, maat, trivy"):
-        load_findings({"matches": []})
+    with pytest.raises(
+        FormatError, match="supported: cyclonedx, grype, maat, trivy"
+    ):
+        load_findings({"unknown": []})
 
 
 def test_ambiguous_format(fake_registry):

@@ -243,9 +243,9 @@ def test_unsupported_schema_version(runner, snapshot):
         ),
         (
             ["--input", "-"],
-            json.dumps({"matches": []}),
+            json.dumps({"unknown": []}),
             "Error: unrecognized input format,"
-            " supported: cyclonedx, maat, trivy",
+            " supported: cyclonedx, grype, maat, trivy",
         ),
         (
             ["--input", "-"],
