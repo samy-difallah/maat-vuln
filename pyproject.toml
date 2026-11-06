@@ -53,6 +53,7 @@ maat = "maat_vuln.cli:app"
 
 [project.entry-points."maat_vuln.adapters"]
 cyclonedx = "maat_vuln.adapters.cyclonedx:ADAPTER"
+grype = "maat_vuln.adapters.grype:ADAPTER"
 maat = "maat_vuln.adapters.native:ADAPTER"
 trivy = "maat_vuln.adapters.trivy:ADAPTER"
 
@@ -150,6 +151,7 @@ type = "forbidden"
 source_modules = ["maat_vuln.*", "tests"]
 forbidden_modules = [
     "maat_vuln.adapters.cyclonedx",
+    "maat_vuln.adapters.grype",
     "maat_vuln.adapters.native",
     "maat_vuln.adapters.registry",
     "maat_vuln.adapters.trivy",
