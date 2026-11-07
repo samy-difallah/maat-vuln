@@ -55,6 +55,7 @@ maat = "maat_vuln.cli:app"
 cyclonedx = "maat_vuln.adapters.cyclonedx:ADAPTER"
 grype = "maat_vuln.adapters.grype:ADAPTER"
 maat = "maat_vuln.adapters.native:ADAPTER"
+osv-scanner = "maat_vuln.adapters.osv_scanner:ADAPTER"
 trivy = "maat_vuln.adapters.trivy:ADAPTER"
 
 [project.urls]
@@ -153,6 +154,7 @@ forbidden_modules = [
     "maat_vuln.adapters.cyclonedx",
     "maat_vuln.adapters.grype",
     "maat_vuln.adapters.native",
+    "maat_vuln.adapters.osv_scanner",
     "maat_vuln.adapters.registry",
     "maat_vuln.adapters.trivy",
 ]

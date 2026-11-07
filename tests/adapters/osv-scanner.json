@@ -1,0 +1,116 @@
+{
+  "results": [
+    {
+      "source": {
+        "path": "/src/app/go.mod",
+        "type": "lockfile"
+      },
+      "packages": [
+        {
+          "package": {
+            "name": "github.com/gogo/protobuf",
+            "version": "1.3.1",
+            "ecosystem": "Go"
+          },
+          "vulnerabilities": [
+            {
+              "modified": "2024-05-20T16:03:47Z",
+              "published": "2022-03-28T20:28:00Z",
+              "schemaVersion": "1.6.0",
+              "id": "GHSA-c3h9-896r-86jm",
+              "aliases": [
+                "CVE-2021-3121"
+              ],
+              "summary": "Improper Input Validation in GoGo Protobuf",
+              "severity": [
+                {
+                  "type": "CVSS_V3",
+                  "score": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+                }
+              ]
+            },
+            {
+              "modified": "2024-05-20T16:03:47Z",
+              "published": "2021-04-14T20:04:52Z",
+              "schemaVersion": "1.6.0",
+              "id": "GO-2021-0053",
+              "aliases": [
+                "CVE-2021-3121",
+                "GHSA-c3h9-896r-86jm"
+              ],
+              "summary": "Panic due to improper input validation in github.com/gogo/protobuf"
+            }
+          ],
+          "groups": [
+            {
+              "ids": [
+                "GHSA-c3h9-896r-86jm",
+                "GO-2021-0053"
+              ],
+              "aliases": [
+                "CVE-2021-3121",
+                "GHSA-c3h9-896r-86jm",
+                "GO-2021-0053"
+              ],
+              "max_severity": "8.6"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "source": {
+        "path": "/src/app/requirements.txt",
+        "type": "lockfile"
+      },
+      "packages": [
+        {
+          "package": {
+            "name": "requests",
+            "version": "2.25.1",
+            "ecosystem": "PyPI",
+            "purl": "pkg:pypi/requests@2.25.1"
+          },
+          "vulnerabilities": [
+            {
+              "modified": "2024-10-28T16:52:59Z",
+              "published": "2023-05-22T20:36:32Z",
+              "schemaVersion": "1.6.0",
+              "id": "GHSA-j8r2-6x86-q33q",
+              "aliases": [
+                "CVE-2023-32681",
+                "PYSEC-2023-74"
+              ],
+              "summary": "Unintended leak of Proxy-Authorization header in requests",
+              "severity": [
+                {
+                  "type": "CVSS_V3",
+                  "score": "CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:U/C:H/I:N/A:N"
+                }
+              ]
+            }
+          ],
+          "groups": [
+            {
+              "ids": [
+                "GHSA-j8r2-6x86-q33q"
+              ],
+              "aliases": [
+                "CVE-2023-32681",
+                "GHSA-j8r2-6x86-q33q",
+                "PYSEC-2023-74"
+              ],
+              "max_severity": "6.1"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "experimental_config": {
+    "licenses": {
+      "summary": false,
+      "allowlist": null
+    }
+  }
+}
