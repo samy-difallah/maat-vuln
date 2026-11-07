@@ -245,7 +245,7 @@ def test_unsupported_schema_version(runner, snapshot):
             ["--input", "-"],
             json.dumps({"unknown": []}),
             "Error: unrecognized input format,"
-            " supported: cyclonedx, grype, maat, trivy",
+            " supported: cyclonedx, grype, maat, osv-scanner, trivy",
         ),
         (
             ["--input", "-"],
