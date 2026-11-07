@@ -1,0 +1,38 @@
+# Examples
+
+Real outputs of supported SCA tools, and a native findings document, to try `maat rank` without installing any scanner.
+
+## Scanned project
+
+[project/](project) is a deliberately vulnerable project: a Gradle lockfile with 11 old Maven packages (Log4j, Struts, Spring, XStream…), a Go module with 5 old dependencies and a Poetry lockfile with 2 old Python packages (aiohttp, Pillow). It only holds lockfiles, so every tool sees the same packages without resolving anything.
+
+## Files
+
+| File | Format | Command |
+|---|---|---|
+| [trivy.json](trivy.json) | `trivy` | `trivy fs --scanners vuln --format json --output trivy.json project` |
+| [trivy-cyclonedx.json](trivy-cyclonedx.json) | `cyclonedx` | `trivy fs --scanners vuln --format cyclonedx --output trivy-cyclonedx.json project` |
+| [grype.json](grype.json) | `grype` | `grype dir:project -o json --file grype.json` |
+| [grype-cyclonedx.json](grype-cyclonedx.json) | `cyclonedx` | `grype dir:project -o cyclonedx-json --file grype-cyclonedx.json` |
+| [osv-scanner.json](osv-scanner.json) | `osv-scanner` | `osv-scanner scan source -r --format json --output-file osv-scanner.json project` |
+| [findings.json](findings.json) | `maat` | written by hand |
+
+The scans ran on 2026-11-07 with Trivy 0.76.2, Grype 0.121.2 and OSV-Scanner 2.7.0, from this directory. The tool outputs are unchanged, except local absolute paths, replaced by relative ones (`project/…`) or `~`. Their vulnerability databases change daily: a new scan of the same project gives different results.
+
+[findings.json](findings.json) is a native document as a product security team could write it: a bare CVE ID, a GHSA ID with its CVE alias and CVSS, and findings of a fictional product, `acme-gateway`, with fictional advisory and internal IDs, one of them without any signal.
+
+## Usage
+
+Rank one document; the format is detected:
+
+```sh
+maat rank --input trivy.json
+```
+
+Combine several documents, in any formats: findings of the same vulnerability and component are merged.
+
+```sh
+maat rank --input trivy.json --input grype.json --input osv-scanner.json --input findings.json
+```
+
+The priorities depend on the feed snapshot used: run `maat snapshot show` to see which one.
