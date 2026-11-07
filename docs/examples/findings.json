@@ -1,0 +1,32 @@
+{
+  "schema_version": "0.2.0",
+  "findings": [
+    {
+      "id": "CVE-2023-4863"
+    },
+    {
+      "id": "GHSA-jfh8-c2jp-5v3q",
+      "aliases": ["CVE-2021-44228"],
+      "component": {"purl": "pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1"},
+      "cvss": [
+        {"version": "3.1", "base_score": 10.0, "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H"}
+      ],
+      "sources": [{"tool": "manual-review", "original_id": "GHSA-jfh8-c2jp-5v3q"}]
+    },
+    {
+      "id": "ACME-SA-2026-001",
+      "aliases": ["CVE-2021-45046", "CVE-2021-44832"],
+      "component": {"name": "acme-gateway", "version": "4.2.0"},
+      "sources": [{"tool": "acme-psirt", "original_id": "ACME-SA-2026-001"}]
+    },
+    {
+      "id": "ACME-2026-0042",
+      "component": {"name": "acme-gateway", "version": "4.2.0"},
+      "cvss": [{"version": "3.1", "base_score": 6.5}]
+    },
+    {
+      "id": "ACME-2026-0043",
+      "component": {"name": "acme-gateway", "version": "4.2.0"}
+    }
+  ]
+}
