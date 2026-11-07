@@ -36,3 +36,7 @@ maat rank --input trivy.json --input grype.json --input osv-scanner.json --input
 ```
 
 The priorities depend on the feed snapshot used: run `maat snapshot show` to see which one.
+
+## Tests
+
+`tests/examples/` runs `maat rank` on these files offline, against feed samples trimmed to their CVEs. When the examples change, update the tests in the same commit.
