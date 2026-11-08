@@ -2,7 +2,7 @@
 
 from pydantic import BaseModel, JsonValue
 
-from maat_vuln.models import Component, Finding, Provenance
+from maat_vuln.models import CVE_PATTERN, Component, Finding, Provenance
 
 RESULTS_KEY = "results"
 GO_PURL_PREFIX = "pkg:golang/"
@@ -24,11 +24,29 @@ def _purl(purl: str | None) -> str | None:
     return f"{name}@{GO_VERSION_PREFIX}{version}"
 
 
+def _is_cve(vuln_id: str) -> bool:
+    """Whether an ID, in any case, is a CVE."""
+    return CVE_PATTERN.fullmatch(vuln_id.upper()) is not None
+
+
 class _Vulnerability(BaseModel):
     """OSV record of a vulnerability affecting a package."""
 
     id: str
     aliases: list[str] = []
+    related: list[str] = []
+    upstream: list[str] = []
+
+    def ids(self) -> list[str]:
+        """Aliases, with the related and upstream CVEs when none is known.
+
+        A record without CVE of its own often lists it as related only
+        (PyPI advisories); without it, the finding would get no signal.
+        """
+        if any(_is_cve(i) for i in (self.id, *self.aliases)):
+            return self.aliases
+        cves = [i for i in (*self.related, *self.upstream) if _is_cve(i)]
+        return [*self.aliases, *cves]
 
 
 class _Package(BaseModel):
@@ -80,7 +98,7 @@ class OsvScannerAdapter:
         return [
             Finding(
                 id=vuln.id,
-                aliases=vuln.aliases,
+                aliases=vuln.ids(),
                 # A git source reports a commit and an empty version.
                 component=Component(
                     purl=_purl(entry.package.purl),

@@ -108,7 +108,6 @@ def test_advisory_with_several_cves(runner):
     assert priorities(report, "CVE-2021-44832") == ["HIGH"]
 
 
-@gap("CVEs under OSV related are not read")
 def test_osv_related_cves(runner):
     """PYSEC-2023-175 is read through its related CVEs, one in KEV."""
     report = rank(runner, "osv-scanner.json")
