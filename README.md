@@ -20,6 +20,7 @@ Rank vulnerabilities, `CRITICAL` first:
 maat rank CVE-2021-44228 CVE-2023-4863
 maat rank < ids.txt
 maat rank --input findings.json --format json
+maat rank --input trivy.json --input osv-scanner.json
 ```
 
 IDs are given as arguments, one per line on stdin, or as a JSON document with `--input` (`-` for stdin). Aliases such as GHSA IDs are accepted; when a CVE alias exists, it becomes the pivot ID. A JSON document can also carry the component and CVSS values supplied by a scanner:
@@ -36,6 +37,8 @@ IDs are given as arguments, one per line on stdin, or as a JSON document with `-
   ]
 }
 ```
+
+`--input` also reads the JSON output of SCA tools: CycloneDX BOMs and VDRs (including Dependency-Track exports), Trivy, Grype (`-o json`) and OSV-Scanner. The format is detected from the document's structure. `--input` can be repeated to combine documents in any formats (`-` at most once): findings of the same vulnerability and component are merged, and each decision lists the tools that reported it. CVSS values reported by the tools are used; their severity labels are ignored. The [examples](https://github.com/samy-difallah/maat-vuln/tree/main/docs/examples) hold real outputs of each tool to try it on.
 
 Explain the priority of one vulnerability, with the rule that matched and every signal used:
 
@@ -64,7 +67,7 @@ for decision in report.decisions:
     print(decision.priority, decision.finding_key.id, decision.rule_id)
 ```
 
-`aprioritize` and `afetch_snapshot` are the async versions.
+`aprioritize` and `afetch_snapshot` are the async versions. `load_findings(document)` turns a parsed JSON document in any supported format into findings.
 
 ## Default policy
 
@@ -84,7 +87,7 @@ Missing data never lowers a priority: it adds a flag such as `cvss_missing` or `
 ## Roadmap
 
 - **v0.1** (released): reproducible core. CRITICAL to LOW verdicts from KEV, EPSS and CVSS with an explanation for each, dated and hashed feed snapshots, table and JSON output, CLI and Python library.
-- **v0.2** (planned): SCA inputs. CycloneDX (including VDR), Trivy, Grype and OSV-Scanner, with multi-source merge and provenance.
+- **v0.2** (released): SCA inputs. CycloneDX (including VDR), Trivy, Grype and OSV-Scanner, with multi-source merge and provenance.
 - **v0.3** (planned): outputs and CI. SARIF, Markdown and enriched CycloneDX output, a `--fail-on` threshold and a GitHub Action.
 - **Later**: VEX support (v0.4) and policies as code (v0.5).
 
