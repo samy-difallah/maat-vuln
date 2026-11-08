@@ -87,17 +87,11 @@ class FindingKey(BaseModel):
     component: str | None
 
 
-def _cve_order(vuln_id: str) -> tuple[int, int]:
-    """Sort key of a CVE ID by year then number, not lexically."""
-    _, year, number = vuln_id.split("-")
-    return int(year), int(number)
-
-
 class Finding(BaseModel):
     """Vulnerability reported on a component, as given in the input.
 
-    After validation, ``id`` is the pivot ID (a CVE whenever one is known)
-    and ``aliases`` holds every other ID, sorted and deduplicated.
+    After validation, ``id`` is the pivot ID (the CVE when exactly one is
+    known) and ``aliases`` holds every other ID, sorted and deduplicated.
     """
 
     id: VulnId
@@ -107,12 +101,34 @@ class Finding(BaseModel):
     sources: list[Provenance] = []
 
     def model_post_init(self, context: object, /) -> None:
-        """Make the CVE pivot the ID and move the other IDs to aliases."""
+        """Make the CVE pivot the ID and move the other IDs to aliases.
+
+        A non-CVE ID with several CVE aliases stays the ID, until
+        :meth:`per_cve` splits the finding.
+        """
         ids = {self.id, *self.aliases}
         cves = [i for i in ids if CVE_PATTERN.fullmatch(i)]
-        if not CVE_PATTERN.fullmatch(self.id) and cves:
-            self.id = min(cves, key=_cve_order)
+        if not CVE_PATTERN.fullmatch(self.id) and len(cves) == 1:
+            self.id = cves[0]
         self.aliases = sorted(ids - {self.id})
+
+    def per_cve(self) -> list[Self]:
+        """Split an advisory covering several CVEs into one finding each.
+
+        Each CVE gets its own KEV and EPSS signals instead of hiding
+        behind one pivot. CVSS values are dropped: nothing tells which
+        CVE they score, so each CVE's own are looked up.
+        """
+        cves = [a for a in self.aliases if CVE_PATTERN.fullmatch(a)]
+        # A lone CVE alias is already the pivot: CVE aliases here are two
+        # or more.
+        if CVE_PATTERN.fullmatch(self.id) or not cves:
+            return [self]
+        others = sorted({self.id, *self.aliases} - set(cves))
+        return [
+            self.model_copy(update={"id": cve, "aliases": others, "cvss": []})
+            for cve in cves
+        ]
 
     @property
     def key(self) -> FindingKey:
@@ -136,13 +152,13 @@ class Finding(BaseModel):
 
 
 def merge_findings(findings: Iterable[Finding]) -> list[Finding]:
-    """Merge findings that share a key, in first-seen order.
+    """Split advisories per CVE, then merge findings that share a key.
 
-    Aliases, CVSS values and sources are unioned; the first finding's
-    component is kept.
+    Merged findings keep their first-seen order: aliases, CVSS values
+    and sources are unioned; the first finding's component is kept.
     """
     merged: dict[FindingKey, Finding] = {}
-    for finding in findings:
+    for finding in (part for f in findings for part in f.per_cve()):
         key = finding.key
         merged[key] = (
             merged[key].merged_with(finding) if key in merged else finding

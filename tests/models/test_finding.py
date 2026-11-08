@@ -60,14 +60,38 @@ def test_cve_id_stays_pivot():
     assert finding.aliases == ["CVE-2020-0001"]
 
 
-def test_lowest_cve_alias_becomes_pivot():
-    """CVE aliases compare by year then number, not as strings."""
-    finding = Finding(
-        id="GHSA-xxxx-yyyy-zzzz",
-        aliases=["CVE-2021-10000", "CVE-2021-9999"],
-    )
+def test_only_cve_alias_becomes_pivot():
+    """A non-CVE ID gives way to its only CVE alias."""
+    finding = Finding(id="GHSA-xxxx-yyyy-zzzz", aliases=["CVE-2021-9999"])
     assert finding.id == "CVE-2021-9999"
-    assert finding.aliases == ["CVE-2021-10000", "GHSA-XXXX-YYYY-ZZZZ"]
+    assert finding.aliases == ["GHSA-XXXX-YYYY-ZZZZ"]
+
+
+def test_advisory_with_several_cves_is_split():
+    """Each CVE of an advisory is a finding, without the advisory CVSS."""
+    component = Component(name="a")
+    source = Provenance(tool="psirt")
+    advisory = Finding(
+        id="ACME-SA-1",
+        aliases=["CVE-2021-10000", "OSV-2024-1", "CVE-2021-9999"],
+        component=component,
+        cvss=[CvssInput(version="3.1", base_score=9.8)],
+        sources=[source],
+    )
+    assert advisory.id == "ACME-SA-1"
+    assert [
+        (f.id, f.aliases, f.component, f.cvss, f.sources)
+        for f in merge_findings([advisory])
+    ] == [
+        (cve, ["ACME-SA-1", "OSV-2024-1"], component, [], [source])
+        for cve in ("CVE-2021-10000", "CVE-2021-9999")
+    ]
+
+
+def test_cve_with_cve_aliases_is_not_split():
+    """A CVE ID stays one finding, whatever CVE aliases it has."""
+    finding = Finding(id="CVE-2024-0002", aliases=["CVE-2020-0001"])
+    assert merge_findings([finding]) == [finding]
 
 
 def test_id_without_cve_stays_pivot():
