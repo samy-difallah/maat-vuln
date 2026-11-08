@@ -11,7 +11,7 @@ from maat_vuln.adapters import load_adapters
 from maat_vuln.models import Component, CvssInput, Provenance
 
 CYCLONEDX = "cyclonedx"
-FIXTURE = Path(__file__).with_name("cyclonedx.json")
+FIXTURE = Path(__file__).parent / "fixtures" / "cyclonedx.json"
 LOG4J = "pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1"
 
 

@@ -17,8 +17,10 @@ from maat_vuln.feeds import (
 )
 from maat_vuln.models import KevSignal
 
+FIXTURES = Path(__file__).parent / "fixtures"
+
 # Trimmed copy of the real catalog: one entry per ransomware value.
-CATALOG = (Path(__file__).parent / "kev.json").read_bytes()
+CATALOG = (FIXTURES / "kev.json").read_bytes()
 
 
 async def test_fetch_returns_raw_catalog(respx_mock):

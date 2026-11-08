@@ -16,7 +16,7 @@ from typer.testing import CliRunner
 from maat_vuln.feeds import CVSS_LOOKUP_URL, EPSS_FILENAME, KEV_FILENAME
 from maat_vuln.snapshot import RawFeed, create_snapshot, default_root
 
-HERE = Path(__file__).parent
+FIXTURES = Path(__file__).parent / "fixtures"
 
 
 @pytest.fixture(autouse=True)
@@ -31,11 +31,11 @@ def cache(tmp_path, monkeypatch):
 def snapshot(cache):
     """Snapshot of the trimmed KEV and EPSS feeds in the user cache."""
     feeds = [
-        ("kev", KEV_FILENAME, (HERE / "kev.json").read_bytes()),
+        ("kev", KEV_FILENAME, (FIXTURES / "kev.json").read_bytes()),
         (
             "epss",
             EPSS_FILENAME,
-            gzip.compress((HERE / "epss.csv").read_bytes()),
+            gzip.compress((FIXTURES / "epss.csv").read_bytes()),
         ),
     ]
     return create_snapshot(

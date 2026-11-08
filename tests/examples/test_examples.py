@@ -14,7 +14,7 @@ from maat_vuln.adapters import load_adapters
 from maat_vuln.cli import app
 from maat_vuln.models import Report
 
-EXAMPLES = Path(__file__).parents[2] / "docs" / "examples"
+EXAMPLES = Path(__file__).parents[2] / "docs" / "examples" / "inputs"
 
 FORMATS = {
     "findings.json": "maat",

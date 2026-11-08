@@ -11,7 +11,7 @@ from maat_vuln.adapters import load_adapters
 from maat_vuln.models import Component, CvssInput, Provenance
 
 GRYPE = "grype"
-FIXTURE = Path(__file__).with_name("grype.json")
+FIXTURE = Path(__file__).parent / "fixtures" / "grype.json"
 LIBSSL = "pkg:deb/debian/libssl3@3.0.13-1~deb12u1?arch=amd64&distro=debian-12"
 CURL = Component(name="curl-minimal", version="8.5.0-1.amzn2023.0.2")
 AXIOS_VECTOR = "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:N/A:N"

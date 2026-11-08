@@ -11,7 +11,7 @@ from maat_vuln.adapters import load_adapters
 from maat_vuln.models import Component, Provenance
 
 OSV_SCANNER = "osv-scanner"
-FIXTURE = Path(__file__).with_name("osv-scanner.json")
+FIXTURE = Path(__file__).parent / "fixtures" / "osv-scanner.json"
 GOGO = Component(name="github.com/gogo/protobuf", version="1.3.1")
 REQUESTS = Component(
     purl="pkg:pypi/requests@2.25.1", name="requests", version="2.25.1"

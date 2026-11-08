@@ -11,7 +11,7 @@ from maat_vuln.adapters import load_adapters
 from maat_vuln.models import Component, CvssInput, Provenance
 
 TRIVY = "trivy"
-FIXTURE = Path(__file__).with_name("trivy.json")
+FIXTURE = Path(__file__).parent / "fixtures" / "trivy.json"
 LIBSSL = (
     "pkg:deb/debian/libssl3@3.0.13-1~deb12u1?arch=amd64&distro=debian-12.7"
 )
