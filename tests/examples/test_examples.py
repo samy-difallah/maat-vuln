@@ -12,7 +12,7 @@ import pytest
 from maat_vuln import load_findings
 from maat_vuln.adapters import load_adapters
 from maat_vuln.cli import app
-from maat_vuln.models import Report
+from maat_vuln.models import Flag, Report
 
 EXAMPLES = Path(__file__).parents[2] / "docs" / "examples" / "inputs"
 
@@ -27,6 +27,7 @@ FORMATS = {
 SCANNERS = ["trivy.json", "grype.json", "osv-scanner.json"]
 
 LOG4SHELL = "CVE-2021-44228"
+LOG4SHELL_GHSA = "GHSA-JFH8-C2JP-5V3Q"
 RAPID_RESET = "CVE-2023-44487"
 
 
@@ -115,11 +116,12 @@ def test_osv_related_cves(runner):
     assert priorities(report, "CVE-2023-4863") == ["CRITICAL"]
 
 
-@gap("Grype CycloneDX output links no GHSA to its CVE")
-def test_grype_cyclonedx_log4shell(runner):
-    """Grype's CycloneDX output ranks Log4Shell CRITICAL."""
+def test_grype_cyclonedx_has_no_cve(runner):
+    """Grype's CycloneDX output gives no CVE: a documented limitation."""
     report = rank(runner, "grype-cyclonedx.json")
-    assert priorities(report, LOG4SHELL) == ["CRITICAL"]
+    assert all(Flag.UNRESOLVED_ID in d.flags for d in report.decisions)
+    assert report.summary.CRITICAL == 0
+    assert priorities(report, LOG4SHELL_GHSA) == ["MEDIUM"]
 
 
 def test_merged_sources_reach_the_report(runner):

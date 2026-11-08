@@ -19,6 +19,8 @@ Real outputs of supported SCA tools, and a native findings document, to try `maa
 
 The scans ran on 2026-11-07 with Trivy 0.76.2, Grype 0.121.2 and OSV-Scanner 2.7.0, from this directory. The tool outputs are unchanged, except local absolute paths, replaced by relative ones (`project/…`) or `~`. Their vulnerability databases change daily: a new scan of the same project gives different results.
 
+Grype's CycloneDX output names vulnerabilities by their GHSA or Go IDs without any CVE, so Maat finds no KEV or EPSS signal for them: Log4Shell comes out as `GHSA-JFH8-C2JP-5V3Q`, `MEDIUM` from its CVSS alone instead of `CRITICAL` from KEV. Use `grype -o json` instead.
+
 [findings.json](inputs/findings.json) is a native document as a product security team could write it: a bare CVE ID, a GHSA ID with its CVE alias and CVSS, and findings of a fictional product, `acme-gateway`, with fictional advisory and internal IDs, one of them without any signal.
 
 ## Usage
