@@ -95,7 +95,6 @@ def test_table(runner):
     assert LOG4SHELL in result.stdout
 
 
-@gap("OSV-Scanner Go purls lack the v of the version")
 def test_go_findings_merge_across_scanners(runner):
     """A Go vulnerability found by several scanners is one decision."""
     report = rank(runner, *SCANNERS)

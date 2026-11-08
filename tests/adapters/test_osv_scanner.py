@@ -102,6 +102,44 @@ def test_git_source(adapter):
     )
 
 
+@pytest.mark.parametrize(
+    ("purl", "expected"),
+    [
+        (
+            "pkg:golang/github.com/gin-gonic/gin@1.6.3",
+            "pkg:golang/github.com/gin-gonic/gin@v1.6.3",
+        ),
+        (
+            "pkg:golang/github.com/dgrijalva/jwt-go@3.2.0%2Bincompatible",
+            "pkg:golang/github.com/dgrijalva/jwt-go@v3.2.0%2Bincompatible",
+        ),
+        (
+            "pkg:golang/golang.org/x/net@v0.7.0",
+            "pkg:golang/golang.org/x/net@v0.7.0",
+        ),
+        ("pkg:golang/golang.org/x/net", "pkg:golang/golang.org/x/net"),
+        ("pkg:pypi/requests@2.25.1", "pkg:pypi/requests@2.25.1"),
+    ],
+)
+def test_go_purl_version(adapter, purl, expected):
+    """Go purl versions get the ``v`` other tools write; others do not."""
+    [finding] = adapter.parse(
+        {
+            "results": [
+                {
+                    "packages": [
+                        {
+                            "package": {"purl": purl},
+                            "vulnerabilities": [{"id": "GO-2021-0053"}],
+                        }
+                    ]
+                }
+            ]
+        }
+    )
+    assert finding.component.purl == expected
+
+
 def test_clean_report(adapter):
     """A report without results (nothing found) gives no finding."""
     assert adapter.parse({"results": [], "experimental_config": {}}) == []
