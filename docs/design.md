@@ -157,6 +157,7 @@ Findings can also come from the JSON output of SCA tools. An adapter turns a doc
 - **Multi-source merge**: several documents, in any formats, combine in one run; their findings are merged as in §3, so sources accumulate.
 - **CLI**: `maat rank --input` accepts a document in any supported format and may be repeated; `-` (stdin) at most once.
 - **Library**: `maat_vuln.load_findings(document) -> list[Finding]` detects the format of a parsed JSON document and parses it.
+- **Limitation**: Grype's CycloneDX output (`-o cyclonedx-json`) names each vulnerability by its GHSA or Go ID without any CVE reference, so its findings get no KEV or EPSS signal. Grype's native JSON (`-o json`) lists the related CVEs and is the one to use.
 
 ## 8. Roadmap
 
