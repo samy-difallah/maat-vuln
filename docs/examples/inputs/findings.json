@@ -1,5 +1,5 @@
 {
-  "schema_version": "0.2.0",
+  "schema_version": "0.3.0",
   "findings": [
     {
       "id": "CVE-2023-4863"
