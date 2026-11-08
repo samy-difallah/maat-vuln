@@ -23,6 +23,8 @@ SNAPSHOT_ID = "a" * 64
 
 DECISION = Decision(
     finding_key=FindingKey(id="CVE-2024-0001", component=None),
+    aliases=[],
+    sources=[],
     priority="CRITICAL",
     rule_id="p1.kev",
     flags=[Flag.EPSS_MISSING],

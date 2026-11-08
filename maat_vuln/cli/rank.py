@@ -1,5 +1,6 @@
 """``maat rank``: rank vulnerabilities by priority, as a table or JSON."""
 
+import json
 import sys
 from typing import Annotated
 
@@ -9,6 +10,7 @@ from rich.console import Console
 from rich.table import Table
 from rich.text import Text
 
+from maat_vuln.adapters import load_findings
 from maat_vuln.cli.common import (
     GREY,
     PRIORITY_STYLES,
@@ -24,12 +26,13 @@ from maat_vuln.models import (
     Decision,
     EpssSignal,
     Finding,
-    FindingsInput,
     KevSignal,
     Report,
 )
 
 ABSENT = "-"
+# Name Click gives the stream it opens for the '-' file argument.
+STDIN_NAME = "<stdin>"
 COLUMNS = (
     "Priority",
     "ID",
@@ -47,18 +50,28 @@ WRAPPING_COLUMNS = frozenset({COMPONENT_COLUMN, "Rule", "Flags"})
 
 
 def _read_findings(
-    ids: list[str], document: typer.FileText | None
+    ids: list[str], documents: list[typer.FileText]
 ) -> list[Finding]:
     """Collect the findings given as arguments, JSON or stdin lines.
 
+    The findings of every document are kept in order; the engine merges
+    those of the same vulnerability and component.
+
     Raises:
-        typer.BadParameter: nothing given and stdin is a terminal.
-        ValidationError: an ID or the JSON document is invalid.
+        typer.BadParameter: stdin given twice as --input, or nothing
+            given and stdin is a terminal.
+        JSONDecodeError: an input document is not JSON.
+        FormatError: an input document is in no supported format.
+        ValidationError: an ID or an input document is invalid.
     """
+    if [document.name for document in documents].count(STDIN_NAME) > 1:
+        raise typer.BadParameter(
+            "'-' (stdin) can be given only once", param_hint="--input"
+        )
     findings = [Finding(id=vuln_id) for vuln_id in ids]
-    if document is not None:
-        findings += FindingsInput.model_validate_json(document.read()).findings
-    elif not ids:
+    for document in documents:
+        findings += load_findings(json.loads(document.read()))
+    if not ids and not documents:
         if sys.stdin.isatty():
             raise typer.BadParameter(
                 "give IDs, --input FILE or IDs on stdin", param_hint="IDS"
@@ -157,9 +170,13 @@ def rank(
             metavar="IDS...", help="Vulnerability IDs (CVE, GHSA…)."
         ),
     ] = None,
-    document: Annotated[
-        typer.FileText | None,
-        typer.Option("--input", help="JSON input document, '-' for stdin."),
+    documents: Annotated[
+        list[typer.FileText] | None,
+        typer.Option(
+            "--input",
+            help="JSON input document in a supported format, '-' for stdin;"
+            " repeat to combine several.",
+        ),
     ] = None,
     output: Annotated[
         OutputFormat, typer.Option("--format", help="Output format.")
@@ -179,12 +196,14 @@ def rank(
 ) -> None:
     """Rank vulnerabilities by priority, CRITICAL first.
 
+    IDs and --input documents, in any supported formats, are ranked
+    together; findings of the same vulnerability and component merge.
     With no IDs and no --input, IDs are read from stdin, one per line.
     The latest snapshot is used unless --snapshot or --refresh is given;
     one is fetched when the cache has none.
     """
     with fail_cleanly():
-        findings = _read_findings(ids or [], document)
+        findings = _read_findings(ids or [], documents or [])
         report = prioritize(
             findings, resolve_snapshot(snapshot_id, refresh), concurrency
         )

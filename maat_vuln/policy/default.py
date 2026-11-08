@@ -13,6 +13,7 @@ from maat_vuln.models import (
     Decision,
     EpssSignal,
     Explanation,
+    Finding,
     FindingKey,
     Flag,
     KevSignal,
@@ -173,9 +174,7 @@ def _flags(
     return [flag for flag in Flag if raised[flag]]
 
 
-def decide(
-    finding_key: FindingKey, signals: Signals, snapshot_id: str
-) -> Decision:
+def decide(finding: Finding, signals: Signals, snapshot_id: str) -> Decision:
     """Apply the first matching rule to a finding's signals."""
     kev = isinstance(signals.kev, KevSignal) and signals.kev.in_kev
     epss = _epss(signals)
@@ -190,10 +189,12 @@ def decide(
         )
     )
     return Decision(
-        finding_key=finding_key,
+        finding_key=finding.key,
+        aliases=finding.aliases,
+        sources=finding.sources,
         priority=rule.priority,
         rule_id=rule.id,
-        flags=_flags(finding_key, signals, rule.priority),
+        flags=_flags(finding.key, signals, rule.priority),
         explanation=Explanation(
             rule=rule.condition,
             thresholds=rule.thresholds,

@@ -6,7 +6,7 @@ from typing import Annotated, Literal, get_args
 
 from pydantic import AfterValidator, AwareDatetime, Field
 
-from maat_vuln.models.finding import FindingKey
+from maat_vuln.models.finding import FindingKey, Provenance
 from maat_vuln.models.input import SCHEMA_VERSION
 from maat_vuln.models.signals import OutputModel, Signals
 
@@ -48,6 +48,8 @@ class Decision(OutputModel):
     """Priority given to one finding, with the rule that set it."""
 
     finding_key: FindingKey
+    aliases: list[str]
+    sources: list[Provenance]
     priority: Priority | None
     rule_id: str
     flags: list[Flag]

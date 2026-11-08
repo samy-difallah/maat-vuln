@@ -157,8 +157,7 @@ async def aprioritize(
     }
     snapshot_id = snapshot.manifest.snapshot_id
     decisions = sort_decisions(
-        decide(finding.key, signals[finding.id], snapshot_id)
-        for finding in merged
+        decide(finding, signals[finding.id], snapshot_id) for finding in merged
     )
     counts = Counter(d.priority or UNSCORED for d in decisions)
     return Report(

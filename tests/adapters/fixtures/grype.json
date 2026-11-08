@@ -1,0 +1,235 @@
+{
+  "matches": [
+    {
+      "vulnerability": {
+        "id": "CVE-2024-6119",
+        "dataSource": "https://security-tracker.debian.org/tracker/CVE-2024-6119",
+        "namespace": "debian:distro:debian:12",
+        "severity": "Medium",
+        "urls": [],
+        "cvss": [],
+        "epss": [
+          {
+            "cve": "CVE-2024-6119",
+            "epss": 0.0052,
+            "percentile": 0.6612,
+            "date": "2026-11-01"
+          }
+        ],
+        "fix": {
+          "versions": ["3.0.14-1~deb12u1"],
+          "state": "fixed"
+        },
+        "advisories": [],
+        "risk": 0.31
+      },
+      "relatedVulnerabilities": [
+        {
+          "id": "CVE-2024-6119",
+          "dataSource": "https://nvd.nist.gov/vuln/detail/CVE-2024-6119",
+          "namespace": "nvd:cpe",
+          "severity": "High",
+          "urls": [],
+          "cvss": [
+            {
+              "source": "nvd@nist.gov",
+              "type": "Primary",
+              "version": "3.1",
+              "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+              "metrics": {
+                "baseScore": 7.5,
+                "exploitabilityScore": 3.9,
+                "impactScore": 3.6
+              },
+              "vendorMetadata": {}
+            }
+          ]
+        }
+      ],
+      "matchDetails": [
+        {
+          "type": "exact-indirect-match",
+          "matcher": "dpkg-matcher",
+          "searchedBy": {
+            "distro": {"type": "debian", "version": "12"}
+          },
+          "found": {"versionConstraint": "< 3.0.14-1~deb12u1 (deb)"}
+        }
+      ],
+      "artifact": {
+        "id": "8a1b6c0e2f3d4a59",
+        "name": "libssl3",
+        "version": "3.0.13-1~deb12u1",
+        "type": "deb",
+        "locations": [],
+        "language": "",
+        "licenses": [],
+        "cpes": [],
+        "purl": "pkg:deb/debian/libssl3@3.0.13-1~deb12u1?arch=amd64&distro=debian-12",
+        "upstreams": [{"name": "openssl"}]
+      }
+    },
+    {
+      "vulnerability": {
+        "id": "GHSA-wf5p-g6vw-rhxx",
+        "dataSource": "https://github.com/advisories/GHSA-wf5p-g6vw-rhxx",
+        "namespace": "github:language:javascript",
+        "severity": "Medium",
+        "urls": [],
+        "cvss": [
+          {
+            "version": "3.1",
+            "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:N/A:N",
+            "metrics": {
+              "baseScore": 6.5,
+              "exploitabilityScore": 2.8,
+              "impactScore": 3.6
+            },
+            "vendorMetadata": {}
+          }
+        ],
+        "fix": {
+          "versions": ["0.28.0"],
+          "state": "fixed"
+        },
+        "advisories": [],
+        "risk": 0.12
+      },
+      "relatedVulnerabilities": [
+        {
+          "id": "CVE-2023-45857",
+          "dataSource": "https://nvd.nist.gov/vuln/detail/CVE-2023-45857",
+          "namespace": "nvd:cpe",
+          "severity": "Medium",
+          "urls": [],
+          "cvss": [
+            {
+              "source": "nvd@nist.gov",
+              "type": "Primary",
+              "version": "3.1",
+              "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:N/A:N",
+              "metrics": {
+                "baseScore": 6.5,
+                "exploitabilityScore": 2.8,
+                "impactScore": 3.6
+              },
+              "vendorMetadata": {}
+            }
+          ]
+        }
+      ],
+      "matchDetails": [
+        {
+          "type": "exact-direct-match",
+          "matcher": "javascript-matcher",
+          "searchedBy": {"language": "javascript", "namespace": "github:language:javascript"},
+          "found": {"versionConstraint": "<0.28.0 (unknown)"}
+        }
+      ],
+      "artifact": {
+        "id": "3c2e9d7f1a0b4e68",
+        "name": "axios",
+        "version": "0.21.1",
+        "type": "npm",
+        "locations": [],
+        "language": "javascript",
+        "licenses": ["MIT"],
+        "cpes": [],
+        "purl": "pkg:npm/axios@0.21.1",
+        "upstreams": []
+      }
+    },
+    {
+      "vulnerability": {
+        "id": "ALAS2023-2024-571",
+        "dataSource": "https://alas.aws.amazon.com/AL2023/ALAS-2024-571.html",
+        "namespace": "amazon:distro:amazonlinux:2023",
+        "severity": "Medium",
+        "urls": [],
+        "cvss": [],
+        "fix": {
+          "versions": ["8.5.0-1.amzn2023.0.4"],
+          "state": "fixed"
+        },
+        "advisories": [],
+        "risk": 0.05
+      },
+      "relatedVulnerabilities": [
+        {
+          "id": "CVE-2024-2398",
+          "dataSource": "https://nvd.nist.gov/vuln/detail/CVE-2024-2398",
+          "namespace": "nvd:cpe",
+          "severity": "High",
+          "urls": [],
+          "cvss": [
+            {
+              "source": "nvd@nist.gov",
+              "type": "Secondary",
+              "version": "3.1",
+              "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+              "metrics": {"baseScore": 7.5},
+              "vendorMetadata": {}
+            }
+          ]
+        },
+        {
+          "id": "CVE-2024-2004",
+          "dataSource": "https://nvd.nist.gov/vuln/detail/CVE-2024-2004",
+          "namespace": "nvd:cpe",
+          "severity": "Low",
+          "urls": [],
+          "cvss": [
+            {
+              "source": "nvd@nist.gov",
+              "type": "Secondary",
+              "version": "3.1",
+              "vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:U/C:N/I:L/A:N",
+              "metrics": {"baseScore": 3.5},
+              "vendorMetadata": {}
+            },
+            {
+              "source": "nvd@nist.gov",
+              "type": "Primary",
+              "version": "2.0",
+              "vector": "AV:N/AC:M/Au:N/C:N/I:P/A:N",
+              "metrics": {"baseScore": 4.3},
+              "vendorMetadata": {}
+            }
+          ]
+        }
+      ],
+      "matchDetails": [
+        {
+          "type": "exact-direct-match",
+          "matcher": "rpm-matcher",
+          "searchedBy": {
+            "distro": {"type": "amazonlinux", "version": "2023"}
+          },
+          "found": {"versionConstraint": "< 8.5.0-1.amzn2023.0.4 (rpm)"}
+        }
+      ],
+      "artifact": {
+        "id": "5f4d3e2c1b0a9f87",
+        "name": "curl-minimal",
+        "version": "8.5.0-1.amzn2023.0.2",
+        "type": "rpm",
+        "locations": [],
+        "language": "",
+        "licenses": [],
+        "cpes": [],
+        "purl": "",
+        "upstreams": [{"name": "curl"}]
+      }
+    }
+  ],
+  "source": {
+    "type": "image",
+    "target": {"userInput": "example:latest"}
+  },
+  "distro": {"name": "", "version": "", "idLike": null},
+  "descriptor": {
+    "name": "grype",
+    "version": "0.121.2",
+    "timestamp": "2026-11-07T10:00:00.000000000Z"
+  }
+}

@@ -23,8 +23,9 @@ The design (data contract, default policy, roadmap) is the reference for every d
 ## Layout
 
 - Flat layout, no `src/`: the package lives directly at the repo root as `maat_vuln/`.
-- Expected subpackages: `models/` (contract), `feeds/` (KEV, EPSS, CVSS clients), `snapshot/`, `policy/`, `engine/` (entry points, re-exported by `maat_vuln`), `cli/`. Create them progressively, as each feature is implemented — do not pre-create empty subpackages or empty test directories/files.
+- Expected subpackages: `models/` (contract), `feeds/` (KEV, EPSS, CVSS clients), `snapshot/`, `policy/`, `engine/` (entry points, re-exported by `maat_vuln`), `adapters/` (input formats, §7 of the design), `cli/`. Create them progressively, as each feature is implemented — do not pre-create empty subpackages or empty test directories/files.
 - `tests/` mirrors the package structure. No `__init__.py` in `tests/` or its subdirectories. Each test directory has its own `conftest.py` when it needs fixtures.
+- Exception: `tests/examples/` runs `maat rank` end to end, offline, on the files of `docs/examples/`. Known gaps are strict `xfail` tests asserting the expected behavior; a fix removes its marker.
 - Each subpackage's `__init__.py` re-exports its public symbols via `__all__` (e.g. `models/__init__.py` re-exports `Finding`, `Decision`). Code outside that subpackage imports from the subpackage itself (`from maat_vuln.models import Finding`), never by reaching into the submodule directly (`from maat_vuln.models.finding import Finding`). Cross-imports within the same subpackage may use the direct submodule path.
 - This convention is enforced by `import-linter` (`[tool.importlinter]` in pyproject.toml, run via `lint-imports`): one `forbidden` contract per subpackage bars every *other* subpackage (and `tests/`) from importing its submodules directly. Whenever a new submodule with public exports is created, add it to the relevant contract's `forbidden_modules` list in the same commit — otherwise the rule silently does not cover it.
 - JSON Schemas generated from the Pydantic models live in `schemas/` and are committed; CI fails if they drift from the models. Regenerate them with `python scripts/generate_schemas.py`.
@@ -64,7 +65,7 @@ Enforced by ruff `ANN` rules — never disabled to make code pass.
 - `pytest`, with `--import-mode=importlib`.
 - Coverage via `pytest-cov`, threshold `fail_under = 80` in `pyproject.toml`.
 - Run: `pytest` (all config comes from `pyproject.toml`, no flags needed).
-- Tests never hit the network: mock HTTP with respx and use small committed fixtures (trimmed real feed samples) next to the tests that use them.
+- Tests never hit the network: mock HTTP with respx and use small committed fixtures (trimmed real feed samples) in a `fixtures/` directory beside the tests that use them.
 
 ## Commits and branches
 

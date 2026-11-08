@@ -134,6 +134,50 @@ def test_input_stdin(runner, snapshot):
     assert ranked(result) == [(IN_KEV, "CRITICAL")]
 
 
+def test_inputs_in_several_formats(runner, snapshot, tmp_path):
+    """Repeated --input documents of any format merge with ID arguments."""
+    native = {
+        "findings": [
+            {
+                "id": IN_KEV,
+                "component": {"purl": PURL},
+                "cvss": [{"version": "3.1", "base_score": 9.8}],
+            }
+        ]
+    }
+    trivy = {
+        "SchemaVersion": 2,
+        "Results": [
+            {
+                "Vulnerabilities": [
+                    {
+                        "VulnerabilityID": IN_KEV,
+                        "PkgIdentifier": {"PURL": PURL},
+                    }
+                ]
+            }
+        ],
+    }
+    path = tmp_path / "trivy.json"
+    path.write_text(json.dumps(trivy))
+    args = ["--input", str(path), "--input", "-", GHSA]
+    result = runner.invoke(
+        app, ["rank", "--format", "json", *args], input=json.dumps(native)
+    )
+    assert ranked(result) == [(IN_KEV, "CRITICAL"), (GHSA, None)]
+    report = Report.model_validate_json(result.stdout)
+    assert report.decisions[0].finding_key.component == PURL
+
+
+def test_stdin_input_twice(runner, snapshot):
+    """'-' can be given to --input only once."""
+    result = runner.invoke(
+        app, ["rank", "--input", "-", "--input", "-"], input=IN_KEV_DOCUMENT
+    )
+    assert result.exit_code == EXIT_USAGE
+    assert "'-' (stdin) can be given only once" in result.stderr
+
+
 def test_stdin_lines(runner, snapshot, respx_mock, cvss_answer):
     """Without IDs or --input, stdin holds one ID per line."""
     respx_mock.post(CVSS_LOOKUP_URL).respond(200, json=cvss_answer)
@@ -240,6 +284,18 @@ def test_unsupported_schema_version(runner, snapshot):
             json.dumps({"findings": [{"id": GHSA, "aliases": ["CVE-1"]}]}),
             "Error: findings.0.aliases.0: malformed CVE ID CVE-1,"
             " expected CVE-YYYY-NNNN",
+        ),
+        (
+            ["--input", "-"],
+            json.dumps({"unknown": []}),
+            "Error: unrecognized input format,"
+            " supported: cyclonedx, grype, maat, osv-scanner, trivy",
+        ),
+        (
+            ["--input", "-"],
+            "CVE-2024-0001",
+            "Error: invalid JSON input: Expecting value:"
+            " line 1 column 1 (char 0)",
         ),
     ],
 )

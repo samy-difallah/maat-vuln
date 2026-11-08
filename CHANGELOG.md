@@ -2,6 +2,34 @@
 
 All notable changes to this project are documented in this file.
 
+## 0.2.0 - 2026-11-08
+
+### Features
+
+- **adapters**: Add adapter architecture with auto-detection (#35)
+- **adapters**: Read CycloneDX JSON BOMs and VDRs (#36)
+- **adapters**: Read Trivy JSON reports (#37)
+- **adapters**: Read Grype JSON reports (#38)
+- **adapters**: Read OSV-Scanner JSON reports (#39)
+- **cli**: Accept several --input documents in any format (#40)
+- **models**: Add the finding's aliases and sources to each decision (#43)
+
+### Bug fixes
+
+- **adapters**: Put the v back on OSV-Scanner Go purl versions (#44)
+- **models**: Give each CVE of an advisory its own signals (#45)
+- **models**: Bump schema_version to 0.3.0 for decision aliases and sources (#47); this changes the JSON output: each decision now carries the `aliases` and `sources` of its finding, and `schema_version` is `0.3.0`
+
+### Documentation
+
+- **design**: Specify v0.2 SCA input adapters (#34)
+- **examples**: Add real SCA outputs and end-to-end tests (#41)
+- **adapters**: Document that Grype CycloneDX output has no CVE (#46)
+
+### Tests
+
+- Move data files out of test and example folders (#42)
+
 ## 0.1.2 - 2026-11-04
 
 ### Refactoring

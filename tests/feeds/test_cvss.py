@@ -17,8 +17,10 @@ from maat_vuln.feeds import (
 )
 from maat_vuln.models import CvssValue
 
+FIXTURES = Path(__file__).parent / "fixtures"
+
 # Trimmed copy of a real bulk answer for these CVEs.
-ANSWER = json.loads((Path(__file__).parent / "cvss_bulk.json").read_text())
+ANSWER = json.loads((FIXTURES / "cvss_bulk.json").read_text())
 CVES = ["CVE-2016-0800", "CVE-2021-44228", "CVE-2024-3094", "CVE-2099-0001"]
 LOG4SHELL = "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H"
 

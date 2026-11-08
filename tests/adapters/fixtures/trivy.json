@@ -1,0 +1,101 @@
+{
+  "SchemaVersion": 2,
+  "Trivy": {
+    "Version": "0.67.2"
+  },
+  "ReportID": "019a5b2e-6f4c-7d8e-9a0b-1c2d3e4f5a6b",
+  "CreatedAt": "2026-11-05T10:00:00.000000000Z",
+  "ArtifactName": "demo-app:1.0.0",
+  "ArtifactType": "container_image",
+  "Metadata": {
+    "OS": {"Family": "debian", "Name": "12.7"},
+    "ImageID": "sha256:4f1c2d3e5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d"
+  },
+  "Results": [
+    {
+      "Target": "demo-app:1.0.0 (debian 12.7)",
+      "Class": "os-pkgs",
+      "Type": "debian",
+      "Vulnerabilities": [
+        {
+          "VulnerabilityID": "CVE-2024-6119",
+          "VendorIDs": ["DSA-5764-1"],
+          "PkgID": "libssl3@3.0.13-1~deb12u1",
+          "PkgName": "libssl3",
+          "PkgIdentifier": {
+            "PURL": "pkg:deb/debian/libssl3@3.0.13-1~deb12u1?arch=amd64&distro=debian-12.7",
+            "UID": "8b3f2c1d4e5a6b7c"
+          },
+          "InstalledVersion": "3.0.13-1~deb12u1",
+          "FixedVersion": "3.0.14-1~deb12u2",
+          "Status": "fixed",
+          "SeveritySource": "nvd",
+          "PrimaryURL": "https://avd.aquasec.com/nvd/cve-2024-6119",
+          "DataSource": {
+            "ID": "debian",
+            "Name": "Debian Security Tracker",
+            "URL": "https://salsa.debian.org/security-tracker-team/security-tracker"
+          },
+          "Title": "openssl: Possible denial of service in X.509 name checks",
+          "Severity": "HIGH",
+          "CweIDs": ["CWE-843"],
+          "VendorSeverity": {"nvd": 3, "redhat": 2},
+          "CVSS": {
+            "nvd": {
+              "V3Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+              "V3Score": 7.5
+            },
+            "redhat": {
+              "V3Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+              "V3Score": 7.5
+            }
+          },
+          "References": ["https://openssl-library.org/news/secadv/20240903.txt"],
+          "PublishedDate": "2024-09-03T16:15:07.177Z",
+          "LastModifiedDate": "2024-09-03T21:35:12.287Z"
+        },
+        {
+          "VulnerabilityID": "cve-2011-3374",
+          "PkgName": "apt",
+          "InstalledVersion": "2.6.1",
+          "Severity": "LOW",
+          "CVSS": {
+            "nvd": {
+              "V2Vector": "AV:N/AC:M/Au:N/C:N/I:P/A:N",
+              "V3Vector": "CVSS:3.0/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:L/A:N",
+              "V40Vector": "CVSS:4.0/AV:N/AC:H/AT:N/PR:N/UI:N/VC:N/VI:L/VA:N/SC:N/SI:N/SA:N",
+              "V2Score": 4.3,
+              "V3Score": 3.7,
+              "V40Score": 2.3
+            },
+            "ghsa": {
+              "V3Vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:L/A:N"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "Target": "app/package-lock.json",
+      "Class": "lang-pkgs",
+      "Type": "npm",
+      "Vulnerabilities": [
+        {
+          "VulnerabilityID": "GHSA-wf5p-g6vw-rhxx",
+          "PkgID": "axios@0.21.1",
+          "PkgName": "axios",
+          "PkgIdentifier": {"PURL": "pkg:npm/axios@0.21.1"},
+          "InstalledVersion": "0.21.1",
+          "Severity": "MEDIUM"
+        }
+      ]
+    },
+    {
+      "Target": "app/.env",
+      "Class": "secret",
+      "Secrets": [
+        {"RuleID": "aws-access-key-id", "Severity": "CRITICAL", "Title": "AWS Access Key ID"}
+      ]
+    }
+  ]
+}

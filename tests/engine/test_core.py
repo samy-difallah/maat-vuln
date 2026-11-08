@@ -27,7 +27,7 @@ from maat_vuln.snapshot import (
 )
 
 # Trimmed real feed samples, shared with the feed client tests.
-FEEDS_DIR = Path(__file__).parent.parent / "feeds"
+FEEDS_DIR = Path(__file__).parents[1] / "feeds" / "fixtures"
 KEV = (FEEDS_DIR / "kev.json").read_bytes()
 EPSS = gzip.compress((FEEDS_DIR / "epss.csv").read_bytes())
 CVSS_ANSWER = json.loads((FEEDS_DIR / "cvss_bulk.json").read_text())

@@ -1,0 +1,155 @@
+{
+  "title": "CISA Catalog of Known Exploited Vulnerabilities",
+  "catalogVersion": "2026.10.30",
+  "dateReleased": "2026-10-30T17:02:45.3665Z",
+  "count": 9,
+  "vulnerabilities": [
+    {
+      "cveID": "CVE-2023-44487",
+      "vendorProject": "IETF",
+      "product": "HTTP/2",
+      "vulnerabilityName": "HTTP/2 Rapid Reset Attack Vulnerability",
+      "dateAdded": "2023-10-10",
+      "shortDescription": "HTTP/2 contains a rapid reset vulnerability that allows for a distributed denial-of-service attack (DDoS).",
+      "requiredAction": "Apply mitigations per vendor instructions, follow applicable BOD 22-01 guidance for cloud services, or discontinue use of the product if mitigations are unavailable.",
+      "dueDate": "2023-10-31",
+      "knownRansomwareCampaignUse": "Unknown",
+      "forensicTriage": "No",
+      "notes": "This vulnerability affects a common open-source component, third-party library, or protocol used by different products. For more information, please see: HTTP/2 Rapid Reset Vulnerability, CVE-2023-44487 | CISA: https://www.cisa.gov/news-events/alerts/2023/10/10/http2-rapid-reset-vulnerability-cve-2023-44487; https://blog.cloudflare.com/technical-breakdown-http2-rapid-reset-ddos-attack/;  https://nvd.nist.gov/vuln/detail/CVE-2023-44487",
+      "cwes": [
+        "CWE-400"
+      ]
+    },
+    {
+      "cveID": "CVE-2023-4863",
+      "vendorProject": "Google",
+      "product": "Chromium WebP",
+      "vulnerabilityName": "Google Chromium WebP Heap-Based Buffer Overflow Vulnerability",
+      "dateAdded": "2023-09-13",
+      "shortDescription": "Google Chromium WebP contains a heap-based buffer overflow vulnerability that allows a remote attacker to perform an out-of-bounds memory write via a crafted HTML page. This vulnerability can affect applications that use the WebP Codec.",
+      "requiredAction": "Apply mitigations per vendor instructions or discontinue use of the product if mitigations are unavailable.",
+      "dueDate": "2023-10-04",
+      "knownRansomwareCampaignUse": "Unknown",
+      "forensicTriage": "No",
+      "notes": "https://chromereleases.googleblog.com/2023/09/stable-channel-update-for-desktop_11.html?m=1; https://nvd.nist.gov/vuln/detail/CVE-2023-4863",
+      "cwes": [
+        "CWE-787"
+      ]
+    },
+    {
+      "cveID": "CVE-2021-45046",
+      "vendorProject": "Apache",
+      "product": "Log4j2",
+      "vulnerabilityName": "Apache Log4j2 Deserialization of Untrusted Data Vulnerability",
+      "dateAdded": "2023-05-01",
+      "shortDescription": "Apache Log4j2 contains a deserialization of untrusted data vulnerability due to the incomplete fix of CVE-2021-44228, where the Thread Context Lookup Pattern is vulnerable to remote code execution in certain non-default configurations.",
+      "requiredAction": "Apply updates per vendor instructions.",
+      "dueDate": "2023-05-22",
+      "knownRansomwareCampaignUse": "Known",
+      "forensicTriage": "No",
+      "notes": "https://logging.apache.org/log4j/2.x/security.html; https://nvd.nist.gov/vuln/detail/CVE-2021-45046",
+      "cwes": [
+        "CWE-917"
+      ]
+    },
+    {
+      "cveID": "CVE-2021-39144",
+      "vendorProject": "XStream",
+      "product": "XStream",
+      "vulnerabilityName": "XStream Remote Code Execution Vulnerability",
+      "dateAdded": "2023-03-10",
+      "shortDescription": "XStream contains a remote code execution vulnerability that allows an attacker to manipulate the processed input stream and replace or inject objects that result in the execution of a local command on the server. This vulnerability can affect multiple products, including but not limited to VMware Cloud Foundation.",
+      "requiredAction": "Apply updates per vendor instructions.",
+      "dueDate": "2023-03-31",
+      "knownRansomwareCampaignUse": "Unknown",
+      "forensicTriage": "No",
+      "notes": "https://www.vmware.com/security/advisories/VMSA-2022-0027.html, https://x-stream.github.io/CVE-2021-39144.html; https://nvd.nist.gov/vuln/detail/CVE-2021-39144",
+      "cwes": [
+        "CWE-94",
+        "CWE-502"
+      ]
+    },
+    {
+      "cveID": "CVE-2022-22965",
+      "vendorProject": "VMware",
+      "product": "Spring Framework",
+      "vulnerabilityName": "Spring Framework JDK 9+ Remote Code Execution Vulnerability",
+      "dateAdded": "2022-04-04",
+      "shortDescription": "Spring MVC or Spring WebFlux application running on JDK 9+ may be vulnerable to remote code execution (RCE) via data binding.",
+      "requiredAction": "Apply updates per vendor instructions.",
+      "dueDate": "2022-04-25",
+      "knownRansomwareCampaignUse": "Unknown",
+      "forensicTriage": "No",
+      "notes": "https://nvd.nist.gov/vuln/detail/CVE-2022-22965",
+      "cwes": [
+        "CWE-94"
+      ]
+    },
+    {
+      "cveID": "CVE-2021-44228",
+      "vendorProject": "Apache",
+      "product": "Log4j2",
+      "vulnerabilityName": "Apache Log4j2 Remote Code Execution Vulnerability",
+      "dateAdded": "2021-12-10",
+      "shortDescription": "Apache Log4j2 contains a vulnerability where JNDI features do not protect against attacker-controlled JNDI-related endpoints, allowing for remote code execution.",
+      "requiredAction": "For all affected software assets for which updates exist, the only acceptable remediation actions are: 1) Apply updates; OR 2) remove affected assets from agency networks. Temporary mitigations using one of the measures provided at https://www.cisa.gov/uscert/ed-22-02-apache-log4j-recommended-mitigation-measures are only acceptable until updates are available.",
+      "dueDate": "2021-12-24",
+      "knownRansomwareCampaignUse": "Known",
+      "forensicTriage": "No",
+      "notes": "https://nvd.nist.gov/vuln/detail/CVE-2021-44228",
+      "cwes": [
+        "CWE-20",
+        "CWE-400",
+        "CWE-502"
+      ]
+    },
+    {
+      "cveID": "CVE-2020-17530",
+      "vendorProject": "Apache",
+      "product": "Struts",
+      "vulnerabilityName": "Apache Struts Remote Code Execution Vulnerability",
+      "dateAdded": "2021-11-03",
+      "shortDescription": "Forced Object-Graph Navigation Language (OGNL) evaluation in Apache Struts, when evaluated on raw user input in tag attributes, can lead to remote code execution.",
+      "requiredAction": "Apply updates per vendor instructions.",
+      "dueDate": "2022-05-03",
+      "knownRansomwareCampaignUse": "Unknown",
+      "forensicTriage": "No",
+      "notes": "https://nvd.nist.gov/vuln/detail/CVE-2020-17530",
+      "cwes": [
+        "CWE-917"
+      ]
+    },
+    {
+      "cveID": "CVE-2017-5638",
+      "vendorProject": "Apache",
+      "product": "Struts",
+      "vulnerabilityName": "Apache Struts Remote Code Execution Vulnerability",
+      "dateAdded": "2021-11-03",
+      "shortDescription": "Apache Struts Jakarta Multipart parser allows for malicious file upload using the Content-Type value, leading to remote code execution.",
+      "requiredAction": "Apply updates per vendor instructions.",
+      "dueDate": "2022-05-03",
+      "knownRansomwareCampaignUse": "Known",
+      "forensicTriage": "No",
+      "notes": "https://nvd.nist.gov/vuln/detail/CVE-2017-5638",
+      "cwes": [
+        "CWE-20"
+      ]
+    },
+    {
+      "cveID": "CVE-2018-11776",
+      "vendorProject": "Apache",
+      "product": "Struts",
+      "vulnerabilityName": "Apache Struts Remote Code Execution Vulnerability",
+      "dateAdded": "2021-11-03",
+      "shortDescription": "Apache Struts contains a vulnerability that allows for remote code execution under two circumstances. One, where the alwaysSelectFullNamespace option is true and the value isn't set for a result defined in underlying configurations and in same time, its upper package configuration have no or wildcard namespace.  Or, using URL tag which doesn't have value and action set and in same time, its upper package configuration have no or wildcard namespace.",
+      "requiredAction": "Apply updates per vendor instructions.",
+      "dueDate": "2022-05-03",
+      "knownRansomwareCampaignUse": "Unknown",
+      "forensicTriage": "No",
+      "notes": "https://nvd.nist.gov/vuln/detail/CVE-2018-11776",
+      "cwes": [
+        "CWE-20"
+      ]
+    }
+  ]
+}

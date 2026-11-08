@@ -40,7 +40,7 @@ General rules:
 | `cvss` | list[CvssInput] | optional; CVSS supplied by the input |
 | `sources` | list[Provenance] | optional; each: tool, tool_version, original_id |
 
-Pivot: the `id` when it is a CVE; otherwise the lowest CVE alias, compared by year then number; otherwise the `id` itself.
+Pivot: the `id` when it is a CVE; otherwise its only CVE alias; otherwise the `id` itself. A finding whose `id` is not a CVE but whose aliases hold several CVEs (an advisory covering several vulnerabilities) is split, before merging, into one finding per CVE, so that no CVE's KEV and EPSS signals are lost behind a pivot: each keeps the non-CVE IDs as aliases, the component and the sources, but no CVSS value, since nothing tells which CVE it scores.
 
 Component: `purl` (preferred), `bom_ref`, `name`, `version`. A finding's key is `(pivot_id, component.purl or bom_ref or name@version or name or none)`, serialized in JSON as an object `{"id": ..., "component": ...}`. Findings with the same key are merged in first-seen order: aliases, CVSS values and sources are unioned, the first component is kept.
 
@@ -74,6 +74,7 @@ A snapshot is written to a temporary directory, renamed once complete. Loading o
 | Field | Notes |
 |---|---|
 | `finding_key` | as defined above |
+| `aliases`, `sources` | those of the finding, merged as above |
 | `priority` | `CRITICAL`, `HIGH`, `MEDIUM`, `LOW` or `null` (unscored) |
 | `rule_id` | see §4 |
 | `flags` | list, see §4 |
@@ -139,14 +140,33 @@ KEV and EPSS are fetched as full feed files, one request each. The only per-vuln
 - **Bulk access first**: before implementing per-CVE lookups, check whether Vulnerability-Lookup offers a batch endpoint or downloadable dumps; prefer them when they exist. It does: CVSS is looked up through its bulk endpoint (`POST /api/vulnerability/bulk`, at most 100 IDs per request), reading for each CVE both its CVE record (`CVE-…`: CNA and ADP metrics) and its NVD record (`fkie_cve-…`), so 50 CVEs per request. Every value of both records is kept, exact duplicates once; a failed request fails the lookup of its whole batch.
 - The CLI stays synchronous and calls the sync facade.
 
-## 7. Roadmap
+## 7. SCA inputs
+
+Findings can also come from the JSON output of SCA tools. An adapter turns a document of one format into findings; past the adapters, nothing knows where a finding came from but its `sources`.
+
+- **Formats**: native (`maat`, §3), CycloneDX (`cyclonedx`: BOMs with `vulnerabilities`, VDR included, which covers Dependency-Track exports), Trivy (`trivy`), Grype (`grype`), OSV-Scanner (`osv-scanner`). JSON only: CycloneDX XML is not read.
+- **Adapter**: an object with `name`, `detect(document) -> bool` and `parse(document) -> list[Finding]`, where `document` is the parsed JSON. Adapters make no network request.
+- **Registration**: adapters are found through the entry-point group `maat_vuln.adapters`. Every built-in adapter, the native one included, has its own entry point pointing to its own module (`maat_vuln.adapters.<module>:ADAPTER`), so other packages add formats the same way.
+- **Auto-detection**: each adapter recognizes its format by its top-level structure. A document must match exactly one adapter: no match is an error listing the supported formats, several matches an error naming them. No option overrides detection.
+- **Identifiers**: the vulnerability ID reported by the tool becomes `id`, its related IDs become `aliases`; the pivot rule and the split of §3 then apply. Grype: a match whose ID is not a CVE and whose related vulnerabilities hold several CVEs (a distro advisory such as `ALAS-…`) is split by the adapter itself, so each CVE keeps its own CVSS values. OSV-Scanner: when a record has no CVE among its ID and aliases, the CVEs of its `related` and `upstream` fields become aliases (a PyPI advisory whose CVE is only listed as related).
+- **Component**: the purl reported by the tool; otherwise its name and version.
+- **Go versions**: OSV-Scanner writes Go module versions without their `v` (`@1.6.3`), unlike the other tools; its adapter puts it back in the purl, so the component merges across tools.
+- **CVSS**: CVSS values reported by the tool become `CvssInput`, hence `source: input` in Signals. A value without a base score (a bare vector) is dropped, and the Vulnerability-Lookup fallback (§6) applies when no other finding of the vulnerability carries CVSS. **Provisional:** if too many values are lost this way, `base_score` becomes optional instead.
+- **Severities**: severity labels assigned by the tools are ignored; only CVSS values are used.
+- **Provenance**: each finding gets one `sources` entry: `tool` and `tool_version` as the document records them (the adapter name when it names no tool), `original_id` the vulnerability ID as the tool reported it. Native documents carry their own `sources`.
+- **Multi-source merge**: several documents, in any formats, combine in one run; their findings are merged as in §3, so sources accumulate.
+- **CLI**: `maat rank --input` accepts a document in any supported format and may be repeated; `-` (stdin) at most once.
+- **Library**: `maat_vuln.load_findings(document) -> list[Finding]` detects the format of a parsed JSON document and parses it.
+- **Limitation**: Grype's CycloneDX output (`-o cyclonedx-json`) names each vulnerability by its GHSA or Go ID without any CVE reference, so its findings get no KEV or EPSS signal. Grype's native JSON (`-o json`) lists the related CVEs and is the one to use.
+
+## 8. Roadmap
 
 Each milestone `v0.N` is the `0.N.x` release series: its features ship together in `0.N.0`, and later `0.N.x` releases only carry fixes.
 
 Short term (committed):
 
 - **v0.1** Reproducible core: the core features of §5.
-- **v0.2** SCA inputs: adapter architecture (entry points) with auto-detection; CycloneDX (incl. VDR, which covers Dependency-Track exports), Trivy, Grype, OSV-Scanner; multi-source merge with provenance. Scanner severities ignored.
+- **v0.2** SCA inputs: adapter architecture (entry points) with auto-detection; CycloneDX (incl. VDR, which covers Dependency-Track exports), Trivy, Grype, OSV-Scanner; multi-source merge with provenance. Scanner severities ignored. See §7.
 - **v0.3** Outputs and CI: SARIF, Markdown, enriched CycloneDX; `--fail-on CRITICAL|HIGH…`; GitHub Action.
 
 Medium term (planned, adjustable):
