@@ -129,8 +129,8 @@ class GrypeAdapter:
                 if record.is_cve():
                     cves.setdefault(record.id.upper(), []).append(record)
             if not match.vulnerability.is_cve() and len(cves) > 1:
-                # An advisory covering several CVEs: each needs its own
-                # pivot, or only the lowest one's signals would be read.
+                # Split here, not when merging, so that each CVE keeps
+                # the CVSS values of its own related record.
                 findings.extend(
                     Finding(
                         id=cve,

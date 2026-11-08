@@ -96,7 +96,7 @@
       "type": "object"
     },
     "Finding": {
-      "description": "Vulnerability reported on a component, as given in the input.\n\nAfter validation, ``id`` is the pivot ID (a CVE whenever one is known)\nand ``aliases`` holds every other ID, sorted and deduplicated.",
+      "description": "Vulnerability reported on a component, as given in the input.\n\nAfter validation, ``id`` is the pivot ID (the CVE when exactly one is\nknown) and ``aliases`` holds every other ID, sorted and deduplicated.",
       "properties": {
         "id": {
           "minLength": 1,

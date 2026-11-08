@@ -40,7 +40,7 @@ General rules:
 | `cvss` | list[CvssInput] | optional; CVSS supplied by the input |
 | `sources` | list[Provenance] | optional; each: tool, tool_version, original_id |
 
-Pivot: the `id` when it is a CVE; otherwise the lowest CVE alias, compared by year then number; otherwise the `id` itself.
+Pivot: the `id` when it is a CVE; otherwise its only CVE alias; otherwise the `id` itself. A finding whose `id` is not a CVE but whose aliases hold several CVEs (an advisory covering several vulnerabilities) is split, before merging, into one finding per CVE, so that no CVE's KEV and EPSS signals are lost behind a pivot: each keeps the non-CVE IDs as aliases, the component and the sources, but no CVSS value, since nothing tells which CVE it scores.
 
 Component: `purl` (preferred), `bom_ref`, `name`, `version`. A finding's key is `(pivot_id, component.purl or bom_ref or name@version or name or none)`, serialized in JSON as an object `{"id": ..., "component": ...}`. Findings with the same key are merged in first-seen order: aliases, CVSS values and sources are unioned, the first component is kept.
 
@@ -148,7 +148,7 @@ Findings can also come from the JSON output of SCA tools. An adapter turns a doc
 - **Adapter**: an object with `name`, `detect(document) -> bool` and `parse(document) -> list[Finding]`, where `document` is the parsed JSON. Adapters make no network request.
 - **Registration**: adapters are found through the entry-point group `maat_vuln.adapters`. Every built-in adapter, the native one included, has its own entry point pointing to its own module (`maat_vuln.adapters.<module>:ADAPTER`), so other packages add formats the same way.
 - **Auto-detection**: each adapter recognizes its format by its top-level structure. A document must match exactly one adapter: no match is an error listing the supported formats, several matches an error naming them. No option overrides detection.
-- **Identifiers**: the vulnerability ID reported by the tool becomes `id`, its related IDs become `aliases`; the pivot rule of §3 then applies. Exception for Grype: a match whose ID is not a CVE and whose related vulnerabilities hold several CVEs (a distro advisory such as `ALAS-…`) becomes one finding per CVE, each with that CVE's own CVSS values, so that no CVE's KEV and EPSS signals are lost behind the pivot.
+- **Identifiers**: the vulnerability ID reported by the tool becomes `id`, its related IDs become `aliases`; the pivot rule and the split of §3 then apply. Grype: a match whose ID is not a CVE and whose related vulnerabilities hold several CVEs (a distro advisory such as `ALAS-…`) is split by the adapter itself, so each CVE keeps its own CVSS values. OSV-Scanner: when a record has no CVE among its ID and aliases, the CVEs of its `related` and `upstream` fields become aliases (a PyPI advisory whose CVE is only listed as related).
 - **Component**: the purl reported by the tool; otherwise its name and version.
 - **Go versions**: OSV-Scanner writes Go module versions without their `v` (`@1.6.3`), unlike the other tools; its adapter puts it back in the purl, so the component merges across tools.
 - **CVSS**: CVSS values reported by the tool become `CvssInput`, hence `source: input` in Signals. A value without a base score (a bare vector) is dropped, and the Vulnerability-Lookup fallback (§6) applies when no other finding of the vulnerability carries CVSS. **Provisional:** if too many values are lost this way, `base_score` becomes optional instead.

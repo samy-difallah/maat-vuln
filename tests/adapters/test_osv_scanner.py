@@ -75,6 +75,38 @@ def test_provenance(findings):
     ]
 
 
+@pytest.mark.parametrize(
+    ("record", "aliases"),
+    [
+        (
+            {
+                "id": "PYSEC-2023-175",
+                "related": ["cve-2023-4863", "GHSA-J7HP-H8JX-5PPR"],
+            },
+            ["CVE-2023-4863"],
+        ),
+        (
+            {"id": "UBUNTU-CVE-2023-1", "upstream": ["CVE-2023-1000"]},
+            ["CVE-2023-1000"],
+        ),
+        (
+            {
+                "id": "GHSA-J7HP-H8JX-5PPR",
+                "aliases": ["CVE-2023-4863"],
+                "related": ["CVE-2023-5129"],
+            },
+            ["CVE-2023-4863"],
+        ),
+    ],
+)
+def test_related_cves(adapter, record, aliases):
+    """Related and upstream CVEs are read only when no CVE is known."""
+    [finding] = adapter.parse(
+        {"results": [{"packages": [{"vulnerabilities": [record]}]}]}
+    )
+    assert [finding.id] == aliases
+
+
 def test_git_source(adapter):
     """A git source's empty version is not kept."""
     [finding] = adapter.parse(

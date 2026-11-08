@@ -101,18 +101,18 @@ def test_go_findings_merge_across_scanners(runner):
     assert priorities(report, RAPID_RESET) == ["CRITICAL"]
 
 
-@gap("only the lowest CVE alias gives signals")
 def test_advisory_with_several_cves(runner):
-    """An advisory is CRITICAL when one of its CVEs is in KEV."""
+    """Each CVE of an advisory gets its own signals: one is in KEV."""
     report = rank(runner, "findings.json")
-    assert "CRITICAL" in priorities(report, "CVE-2021-44832")
+    assert priorities(report, "CVE-2021-45046") == ["CRITICAL"]
+    assert priorities(report, "CVE-2021-44832") == ["HIGH"]
 
 
-@gap("CVEs under OSV related are not read")
 def test_osv_related_cves(runner):
-    """PYSEC-2023-175 is CRITICAL through its related KEV CVE-2023-4863."""
+    """PYSEC-2023-175 is read through its related CVEs, one in KEV."""
     report = rank(runner, "osv-scanner.json")
-    assert priorities(report, "PYSEC-2023-175") == ["CRITICAL"]
+    assert "PYSEC-2023-175" not in {d.finding_key.id for d in report.decisions}
+    assert priorities(report, "CVE-2023-4863") == ["CRITICAL"]
 
 
 @gap("Grype CycloneDX output links no GHSA to its CVE")
