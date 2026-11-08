@@ -5,6 +5,23 @@ from pydantic import BaseModel, JsonValue
 from maat_vuln.models import Component, Finding, Provenance
 
 RESULTS_KEY = "results"
+GO_PURL_PREFIX = "pkg:golang/"
+GO_VERSION_PREFIX = "v"
+
+
+def _purl(purl: str | None) -> str | None:
+    """Put back the ``v`` that OSV strips from Go module versions.
+
+    Go versions start with ``v`` (``v1.6.3``), as other tools write them
+    in purls; without it, the same component would not merge across
+    tools.
+    """
+    if not purl or not purl.startswith(GO_PURL_PREFIX) or "@" not in purl:
+        return purl or None
+    name, _, version = purl.rpartition("@")
+    if version.startswith(GO_VERSION_PREFIX):
+        return purl
+    return f"{name}@{GO_VERSION_PREFIX}{version}"
 
 
 class _Vulnerability(BaseModel):
@@ -66,7 +83,7 @@ class OsvScannerAdapter:
                 aliases=vuln.aliases,
                 # A git source reports a commit and an empty version.
                 component=Component(
-                    purl=entry.package.purl or None,
+                    purl=_purl(entry.package.purl),
                     name=entry.package.name or None,
                     version=entry.package.version or None,
                 ),
