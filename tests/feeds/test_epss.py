@@ -17,8 +17,10 @@ from maat_vuln.feeds import (
 )
 from maat_vuln.models import EpssSignal
 
+FIXTURES = Path(__file__).parent / "fixtures"
+
 # Trimmed copy of the real file, gzipped as it is served.
-SCORES = gzip.compress((Path(__file__).parent / "epss.csv").read_bytes())
+SCORES = gzip.compress((FIXTURES / "epss.csv").read_bytes())
 HEADER = "#model_version:v2026.06.15,score_date:2026-10-22T12:00:12Z\n"
 
 

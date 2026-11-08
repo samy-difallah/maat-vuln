@@ -65,7 +65,7 @@ Enforced by ruff `ANN` rules — never disabled to make code pass.
 - `pytest`, with `--import-mode=importlib`.
 - Coverage via `pytest-cov`, threshold `fail_under = 80` in `pyproject.toml`.
 - Run: `pytest` (all config comes from `pyproject.toml`, no flags needed).
-- Tests never hit the network: mock HTTP with respx and use small committed fixtures (trimmed real feed samples) next to the tests that use them.
+- Tests never hit the network: mock HTTP with respx and use small committed fixtures (trimmed real feed samples) in a `fixtures/` directory beside the tests that use them.
 
 ## Commits and branches
 

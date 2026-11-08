@@ -77,7 +77,7 @@ The ruff configuration in `pyproject.toml` is authoritative. Rules are never dis
 - `tests/` mirrors the package structure, without `__init__.py` files. A test directory gets its own `conftest.py` when it needs fixtures.
 - `tests/examples/` is the exception: it runs `maat rank` end to end, offline, on the files of `docs/examples/`. A known gap is a strict `xfail` test asserting the expected behavior, so its fix makes the test pass and the marker must then be removed.
 - Coverage must stay at or above 80%.
-- Tests never hit the network: mock HTTP with respx and use small committed fixtures (trimmed real feed samples) next to the tests that use them.
+- Tests never hit the network: mock HTTP with respx and use small committed fixtures (trimmed real feed samples) in a `fixtures/` directory beside the tests that use them.
 
 ## Documentation
 

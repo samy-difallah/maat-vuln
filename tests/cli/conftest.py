@@ -12,7 +12,7 @@ from maat_vuln.feeds import EPSS_FILENAME, EPSS_URL, KEV_FILENAME, KEV_URL
 from maat_vuln.snapshot import RawFeed, create_snapshot, default_root
 
 # Trimmed real feed samples, shared with the feed client tests.
-FEEDS_DIR = Path(__file__).parent.parent / "feeds"
+FEEDS_DIR = Path(__file__).parents[1] / "feeds" / "fixtures"
 
 
 @pytest.fixture(autouse=True)
