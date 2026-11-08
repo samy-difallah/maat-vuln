@@ -123,14 +123,11 @@ def test_grype_cyclonedx_log4shell(runner):
     assert priorities(report, LOG4SHELL) == ["CRITICAL"]
 
 
-@gap("decisions carry no aliases nor sources")
 def test_merged_sources_reach_the_report(runner):
     """A decision lists the tools that reported its finding."""
     report = rank(runner, *SCANNERS)
     decision = next(
         d for d in report.decisions if d.finding_key.id == LOG4SHELL
     )
-    dump = decision.model_dump()
-    assert "sources" in dump
-    tools = {source["tool"] for source in dump["sources"]}
+    tools = {source.tool for source in decision.sources}
     assert tools == {"trivy", "grype", "osv-scanner"}
