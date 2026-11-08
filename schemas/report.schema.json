@@ -80,6 +80,20 @@
         "finding_key": {
           "$ref": "#/$defs/FindingKey"
         },
+        "aliases": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Aliases",
+          "type": "array"
+        },
+        "sources": {
+          "items": {
+            "$ref": "#/$defs/Provenance"
+          },
+          "title": "Sources",
+          "type": "array"
+        },
         "priority": {
           "anyOf": [
             {
@@ -127,6 +141,8 @@
       },
       "required": [
         "finding_key",
+        "aliases",
+        "sources",
         "priority",
         "rule_id",
         "flags",
@@ -286,6 +302,49 @@
         "version"
       ],
       "title": "PolicyRef",
+      "type": "object"
+    },
+    "Provenance": {
+      "description": "Tool that reported a finding.",
+      "properties": {
+        "tool": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tool"
+        },
+        "tool_version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tool Version"
+        },
+        "original_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Original Id"
+        }
+      },
+      "title": "Provenance",
       "type": "object"
     },
     "Signals": {

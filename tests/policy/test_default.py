@@ -5,11 +5,13 @@ from datetime import date
 import pytest
 
 from maat_vuln.models import (
+    Component,
     CvssValue,
     EpssSignal,
-    FindingKey,
+    Finding,
     Flag,
     KevSignal,
+    Provenance,
     Signals,
 )
 from maat_vuln.policy import (
@@ -25,7 +27,8 @@ from maat_vuln.policy import (
 )
 
 SNAPSHOT_ID = "a" * 64
-CVE_KEY = FindingKey(id="CVE-2024-0001", component=None)
+CVE_FINDING = Finding(id="CVE-2024-0001")
+GHSA_FINDING = Finding(id="GHSA-AAAA-BBBB-CCCC")
 
 
 def cvss_value(score, version="3.1", source="input"):
@@ -73,18 +76,18 @@ def make_signals(kev=False, epss=None, cvss=None):
 )
 def test_first_matching_rule_sets_priority(kev, epss, cvss, priority, rule_id):
     """Each rule matches at its boundaries; missing data never caps."""
-    decision = decide(CVE_KEY, make_signals(kev, epss, cvss), SNAPSHOT_ID)
+    decision = decide(CVE_FINDING, make_signals(kev, epss, cvss), SNAPSHOT_ID)
     assert (decision.priority, decision.rule_id) == (priority, rule_id)
 
 
 def test_decision_carries_policy_and_explanation():
     """The decision names the policy, rule text, thresholds and signals."""
     signals = make_signals(epss=0.5, cvss=9.8)
-    decision = decide(CVE_KEY, signals, SNAPSHOT_ID)
+    decision = decide(CVE_FINDING, signals, SNAPSHOT_ID)
     assert decision.policy_id == POLICY_ID
     assert decision.policy_version == POLICY_VERSION
     assert decision.snapshot_id == SNAPSHOT_ID
-    assert decision.finding_key == CVE_KEY
+    assert decision.finding_key == CVE_FINDING.key
     assert decision.flags == []
     assert decision.explanation.rule == (
         "EPSS probability ≥ 0.10 and not (CVSS < 4.0)"
@@ -96,26 +99,39 @@ def test_decision_carries_policy_and_explanation():
     assert decision.explanation.signals == signals
 
 
+def test_decision_carries_aliases_and_sources():
+    """The decision lists the finding's aliases and sources."""
+    source = Provenance(tool="trivy", original_id="GHSA-AAAA-BBBB-CCCC")
+    finding = Finding(
+        id="CVE-2024-0001",
+        aliases=["GHSA-AAAA-BBBB-CCCC"],
+        sources=[source],
+    )
+    decision = decide(finding, make_signals(), SNAPSHOT_ID)
+    assert decision.aliases == ["GHSA-AAAA-BBBB-CCCC"]
+    assert decision.sources == [source]
+
+
 @pytest.mark.parametrize(
-    ("key", "signals", "flags"),
+    ("finding", "signals", "flags"),
     [
         (
-            CVE_KEY,
+            CVE_FINDING,
             make_signals(epss=0.5),
             [Flag.CVSS_MISSING],
         ),
         (
-            CVE_KEY,
+            CVE_FINDING,
             Signals(kev=KevSignal(in_kev=False), epss=epss_signal(0.5)),
             [Flag.CVSS_LOOKUP_FAILED],
         ),
         (
-            CVE_KEY,
+            CVE_FINDING,
             make_signals(cvss=5.0),
             [Flag.EPSS_MISSING],
         ),
         (
-            CVE_KEY,
+            CVE_FINDING,
             Signals(
                 kev=KevSignal(in_kev=False),
                 epss=epss_signal(0.5),
@@ -124,12 +140,12 @@ def test_decision_carries_policy_and_explanation():
             [Flag.CVSS_LEGACY],
         ),
         (
-            CVE_KEY,
+            CVE_FINDING,
             make_signals(),
             [Flag.CVSS_MISSING, Flag.EPSS_MISSING, Flag.UNSCORED],
         ),
         (
-            FindingKey(id="GHSA-AAAA-BBBB-CCCC", component=None),
+            GHSA_FINDING,
             Signals(),
             [
                 Flag.CVSS_MISSING,
@@ -139,15 +155,15 @@ def test_decision_carries_policy_and_explanation():
             ],
         ),
         (
-            FindingKey(id="GHSA-AAAA-BBBB-CCCC", component=None),
+            GHSA_FINDING,
             Signals(cvss=select_cvss([cvss_value(9.0)])),
             [Flag.EPSS_MISSING, Flag.UNRESOLVED_ID],
         ),
     ],
 )
-def test_flags_name_each_missing_signal(key, signals, flags):
+def test_flags_name_each_missing_signal(finding, signals, flags):
     """Each missing signal raises its flag, in ``Flag`` order."""
-    assert decide(key, signals, SNAPSHOT_ID).flags == flags
+    assert decide(finding, signals, SNAPSHOT_ID).flags == flags
 
 
 def test_select_cvss_prefers_newest_version():
@@ -176,8 +192,10 @@ def test_select_cvss_breaks_version_tie_on_highest_score():
 
 def make_decision(key_id="CVE-2024-0001", component=None, **signals):
     """Decide on a finding built from its key and signals."""
-    key = FindingKey(id=key_id, component=component)
-    return decide(key, make_signals(**signals), SNAPSHOT_ID)
+    finding = Finding(
+        id=key_id, component=component and Component(purl=component)
+    )
+    return decide(finding, make_signals(**signals), SNAPSHOT_ID)
 
 
 def test_sort_decisions_follows_report_order():

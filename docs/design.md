@@ -74,6 +74,7 @@ A snapshot is written to a temporary directory, renamed once complete. Loading o
 | Field | Notes |
 |---|---|
 | `finding_key` | as defined above |
+| `aliases`, `sources` | those of the finding, merged as above |
 | `priority` | `CRITICAL`, `HIGH`, `MEDIUM`, `LOW` or `null` (unscored) |
 | `rule_id` | see §4 |
 | `flags` | list, see §4 |
