@@ -85,7 +85,7 @@ A snapshot is written to a temporary directory, renamed once complete. Loading o
 
 ### Report (output)
 
-`schema_version`, `generated_at`, `maat_version`, `policy` (id, version), `snapshot_id`, `decisions` (sorted, §4), `summary` (count per priority, every key always present: `{"CRITICAL", "HIGH", "MEDIUM", "LOW", "unscored"}`).
+`schema_version`, `generated_at`, `maat_version`, `policy` (id, version), `snapshot_id`, `decisions` (sorted, §4), `summary` (count per priority, every key always present: `{"CRITICAL", "HIGH", "MEDIUM", "LOW", "unscored"}`), `selection` (only when `rank` kept part of the decisions, §8: `min_priority` and `top` as given, each absent when not given, and `total`, the number of decisions before selection). The summary always counts every decision, selected or not.
 
 ## 4. Default policy `maat-default` v1
 
@@ -119,7 +119,7 @@ Sort order of decisions: priority (`CRITICAL` → `LOW`, unscored last), then EP
 - Snapshots as described in §3.
 - Default policy (§4).
 - Output: Rich table and JSON Report.
-- CLI (names may be refined during planning):
+- CLI (names may be refined during planning; global options, snapshot housekeeping and selection in §8):
   - `maat rank [IDS...] [--input FILE|-] [--format table|json] [--snapshot ID] [--refresh] [--concurrency N]`: ID arguments and `--input` (a JSON document, `-` for stdin) combine; with neither, stdin is read as one ID per line. When the cache holds no snapshot, one is fetched. `--concurrency` caps simultaneous CVSS lookups (§6).
   - `maat explain ID [--component PURL] [--format table|json] [--snapshot ID] [--refresh]`: rule, signal values, sources, snapshot (`json`: the Decision); snapshot options as for `rank`
   - `maat snapshot fetch` / `maat snapshot show [ID] [--format table|json]`: `fetch` prints the new snapshot ID; `show` prints the given or latest snapshot: ID, creation date, cached CVSS lookups and each feed's version, URL and hash (`json`: the manifest)
@@ -159,7 +159,26 @@ Findings can also come from the JSON output of SCA tools. An adapter turns a doc
 - **Library**: `maat_vuln.load_findings(document) -> list[Finding]` detects the format of a parsed JSON document and parses it.
 - **Limitation**: Grype's CycloneDX output (`-o cyclonedx-json`) names each vulnerability by its GHSA or Go ID without any CVE reference, so its findings get no KEV or EPSS signal. Grype's native JSON (`-o json`) lists the related CVEs and is the one to use.
 
-## 8. Roadmap
+## 8. Command line
+
+The CLI of §5, completed for daily and scripted use. Every option below is operational: none changes a verdict.
+
+- **Global options**: given before the command (`maat -q rank …`), they apply to every command: `-V/--version`, `-q/--quiet`, `-v/--verbose`, `--cache-dir DIR`, `--config FILE`.
+- **Version**: `-V/--version` prints `maat-vuln <version>` and exits.
+- **Output streams**: stdout holds only the result (table, JSON, snapshot IDs); progress, warnings and logs go to stderr. `-q/--quiet` silences stderr except errors; `-v/--verbose` adds the library's debug logs. The two cannot be combined. The library logs through `logging`, under the `maat_vuln` logger, and never configures handlers: the CLI does.
+- **Cache directory**: `--cache-dir DIR` replaces the user cache of platformdirs; snapshots then live in `DIR/snapshots/`. The library already takes this location as the `root` argument of its snapshot functions.
+- **Snapshot freshness** (`rank`, `explain`): when the latest snapshot is reused and is older than `stale_after` (24 hours by default, set in the config file), a warning on stderr gives its age and suggests `--refresh` or `--max-age`. `--max-age HOURS` (a positive integer) reuses the latest snapshot only if it is younger than that, and fetches a new one otherwise; it cannot be combined with `--snapshot` or `--refresh`. A snapshot chosen with `--snapshot` never triggers the warning.
+- **Snapshot housekeeping**:
+  - `maat snapshot list [--format table|json]`: every snapshot of the cache, newest first, with its ID, creation date, number of cached CVSS lookups and feed versions (`json`: the list of manifests).
+  - `maat snapshot prune --keep N`: deletes every snapshot but the N newest and prints the deleted IDs, one per line.
+  - `maat snapshot rm ID...`: deletes the given snapshots and prints their IDs; an unknown ID is an error, and then nothing is deleted.
+- **Formats**: `maat formats` lists the input formats of the installed adapters (§7), one name per line, sorted.
+- **Selection** (`rank`): `--min-priority CRITICAL|HIGH|MEDIUM|LOW` keeps the decisions of that priority or above, unscored ones excluded; `--top N` then keeps the first N decisions in the sort order of §4. `--top` counts decisions, not vulnerabilities, and the cut is exact: it may split the decisions of one vulnerability, and keeps them all without warning when there are N or fewer. Both apply to the table and to JSON: the table states how many decisions it shows out of how many, the Report records the selection (§3).
+- **Environment variables**: every config key that has a flag can also be set as `MAAT_<KEY>` (`MAAT_CACHE_DIR`, `MAAT_CONCURRENCY`…).
+- **Config file**: `maat.toml`, top-level keys `cache_dir`, `concurrency`, `max_age`, `stale_after`, `format` (default of every command's `--format`), `quiet`, `verbose` and `min_priority`. An unknown key or a wrong type is an error. There is no command to read or write it.
+- **Precedence**: flag, then `MAAT_*` variable, then config file, then default. The config file is the one given by `--config FILE`, otherwise `./maat.toml` when it exists. `--config` replaces that lookup: only its file is read, and its missing keys fall back to defaults, never to `./maat.toml`; a missing `--config` file is an error.
+
+## 9. Roadmap
 
 Each milestone `v0.N` is the `0.N.x` release series: its features ship together in `0.N.0`, and later `0.N.x` releases only carry fixes.
 
@@ -167,11 +186,12 @@ Short term (committed):
 
 - **v0.1** Reproducible core: the core features of §5.
 - **v0.2** SCA inputs: adapter architecture (entry points) with auto-detection; CycloneDX (incl. VDR, which covers Dependency-Track exports), Trivy, Grype, OSV-Scanner; multi-source merge with provenance. Scanner severities ignored. See §7.
-- **v0.3** Outputs and CI: SARIF, Markdown, enriched CycloneDX; `--fail-on CRITICAL|HIGH…`; GitHub Action.
+- **v0.3** Command line: version, quiet and verbose modes, cache directory, config file and environment variables, snapshot freshness (`--max-age`, stale warning), `snapshot list` / `prune` / `rm`, `formats`, `rank --min-priority` / `--top`. See §8.
+- **v0.4** Outputs and CI: SARIF, Markdown, enriched CycloneDX; `--fail-on CRITICAL|HIGH…`; GitHub Action.
 
 Medium term (planned, adjustable):
 
-- **v0.4** VEX: CycloneDX VEX, OpenVEX, CSAF VEX, through `suppressed_by`.
-- **v0.5** Policy as code: YAML policies, `policy validate` / `policy test`, SSVC example policy.
+- **v0.5** VEX: CycloneDX VEX, OpenVEX, CSAF VEX, through `suppressed_by`.
+- **v0.6** Policy as code: YAML policies, `policy validate` / `policy test`, SSVC example policy.
 
 Horizon (direction only, unversioned): offline bundles, `replay` / `diff`; European sources (EUVD, GCVE); context file (exposure, criticality); CRA notification signal; Dependency-Track (FPF) and Dependency-Check adapters; finer ranking formulas and graphical outputs once the tool is mature.
