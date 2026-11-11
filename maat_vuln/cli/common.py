@@ -1,6 +1,7 @@
 """Pieces shared by the commands: options, error handling and display."""
 
 import json
+import logging
 from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import UTC, datetime
@@ -18,6 +19,7 @@ from maat_vuln.models import PRIORITIES, Priority
 from maat_vuln.snapshot import (
     Snapshot,
     SnapshotError,
+    default_root,
     latest_snapshot,
     load_snapshot,
 )
@@ -33,6 +35,7 @@ PRIORITY_STYLES = {
     "LOW": "cyan",
 }
 UNSCORED = "unscored"
+logger = logging.getLogger(__name__)
 
 
 class OutputFormat(StrEnum):
@@ -63,8 +66,12 @@ def _message(error: Exception) -> str:
 
 
 @contextmanager
-def fail_cleanly() -> Iterator[None]:
-    """Turn expected errors into a message on stderr and exit code 1."""
+def fail_cleanly(quiet: bool = False) -> Iterator[None]:
+    """Turn expected errors into a message on stderr and exit code 1.
+
+    Args:
+        quiet: Exit with code 1 without any message.
+    """
     try:
         yield
     except (
@@ -74,7 +81,8 @@ def fail_cleanly() -> Iterator[None]:
         FormatError,
         json.JSONDecodeError,
     ) as error:
-        typer.echo(f"Error: {_message(error)}", err=True)
+        if not quiet:
+            typer.echo(f"Error: {_message(error)}", err=True)
         raise typer.Exit(EXIT_ERROR) from error
 
 
@@ -91,9 +99,20 @@ def resolve_snapshot(snapshot_id: str | None, refresh: bool) -> Snapshot:
             "cannot be combined with --snapshot", param_hint="'--refresh'"
         )
     if snapshot_id is not None:
+        logger.info("Loading snapshot %s, given by --snapshot", snapshot_id)
         return load_snapshot(snapshot_id)
-    if not refresh and (snapshot := latest_snapshot()) is not None:
+    if refresh:
+        logger.info("Fetching a new snapshot, as --refresh asks")
+        return fetch_snapshot()
+    logger.info("Looking for the latest snapshot in %s", default_root())
+    if (snapshot := latest_snapshot()) is not None:
+        logger.info(
+            "Using the latest snapshot %s, created %s",
+            snapshot.manifest.snapshot_id,
+            timestamp(snapshot.manifest.created_at),
+        )
         return snapshot
+    logger.info("No snapshot in the cache: fetching a new one")
     return fetch_snapshot()
 
 
