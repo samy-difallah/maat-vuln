@@ -5,6 +5,7 @@ import json
 import logging
 
 import pytest
+from rich.text import Text
 
 from maat_vuln.cli import app
 from maat_vuln.feeds import CVSS_LOOKUP_URL, EPSS_URL, KEV_URL
@@ -282,7 +283,11 @@ def test_quiet_usage_error(runner):
         app, ["rank", "-q", "--snapshot", UNKNOWN_SNAPSHOT, "--refresh", GHSA]
     )
     assert result.exit_code == EXIT_USAGE
-    assert "cannot be combined with --snapshot" in result.stderr
+    # On GitHub Actions, Typer colours option names in its messages.
+    assert (
+        "cannot be combined with --snapshot"
+        in Text.from_ansi(result.stderr).plain
+    )
 
 
 def test_verbose(runner, feeds, respx_mock, cvss_answer):
@@ -341,7 +346,11 @@ def test_quiet_and_verbose(runner):
     """Quiet and verbose modes cannot be combined."""
     result = runner.invoke(app, ["rank", "-q", "-v", GHSA])
     assert result.exit_code == EXIT_USAGE
-    assert "cannot be combined with --verbose" in result.stderr
+    # On GitHub Actions, Typer colours option names in its messages.
+    assert (
+        "cannot be combined with --verbose"
+        in Text.from_ansi(result.stderr).plain
+    )
 
 
 @pytest.mark.parametrize(
