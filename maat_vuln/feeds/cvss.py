@@ -7,6 +7,7 @@ cached and a later run retries it.
 """
 
 import asyncio
+import logging
 from collections.abc import Iterable
 from datetime import UTC, datetime
 
@@ -35,6 +36,8 @@ NVD_RECORD_FIELDS: dict[str, CvssVersion] = {
     "cvssMetricV30": "3.0",
     "cvssMetricV2": "2.0",
 }
+
+logger = logging.getLogger(__name__)
 
 
 class _Cvss(BaseModel):
@@ -154,7 +157,10 @@ async def _lookup_batch(
         response = await client.post(CVSS_LOOKUP_URL, json={"ids": ids})
         response.raise_for_status()
         answer = _BulkAnswer.model_validate_json(response.content)
-    except (FetchError, httpx.HTTPStatusError, ValidationError):
+    except (FetchError, httpx.HTTPStatusError, ValidationError) as error:
+        logger.info(
+            "CVSS lookup of %s to %s failed: %s", cves[0], cves[-1], error
+        )
         return []
     retrieved_at = datetime.now(UTC)
     records = {entry.id: entry.vulnerability for entry in answer.data}
@@ -185,6 +191,11 @@ async def lookup_cvss(
         unique[start : start + CVSS_BATCH_SIZE]
         for start in range(0, len(unique), CVSS_BATCH_SIZE)
     ]
+    logger.info(
+        "Looking up CVSS in Vulnerability-Lookup: CVEs %d, requests %d",
+        len(unique),
+        len(batches),
+    )
     results = await asyncio.gather(
         *(_lookup_batch(client, batch) for batch in batches)
     )
