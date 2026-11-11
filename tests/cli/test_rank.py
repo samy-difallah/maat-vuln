@@ -2,13 +2,14 @@
 
 import io
 import json
+import logging
 
 import pytest
 
 from maat_vuln.cli import app
 from maat_vuln.feeds import CVSS_LOOKUP_URL, EPSS_URL, KEV_URL
 from maat_vuln.models import Report
-from maat_vuln.snapshot import latest_snapshot
+from maat_vuln.snapshot import default_root, latest_snapshot
 
 IN_KEV = "CVE-2026-106931"
 XZ = "CVE-2024-3094"
@@ -49,6 +50,8 @@ def test_table(runner, snapshot, respx_mock, cvss_answer):
     respx_mock.post(CVSS_LOOKUP_URL).respond(200, json=cvss_answer)
     result = runner.invoke(app, ["rank", GHSA, XZ])
     assert result.exit_code == 0, result.output
+    # Processing steps are only shown in verbose mode.
+    assert result.stderr == ""
     lines = result.stdout.splitlines()
     xz_row = next(line for line in lines if XZ in line)
     assert "HIGH (P2)" in xz_row
@@ -244,6 +247,120 @@ def test_fetch_failure(runner, respx_mock, epss):
     result = runner.invoke(app, ["rank", GHSA])
     assert result.exit_code == 1
     assert result.stderr.startswith("Error: ")
+
+
+def in_order(lines, prefixes):
+    """Tell whether lines start with the prefixes in order, gaps allowed."""
+    remaining = iter(lines)
+    return all(
+        any(line.startswith(prefix) for line in remaining)
+        for prefix in prefixes
+    )
+
+
+@pytest.mark.parametrize("output", ["table", "json"])
+def test_quiet(runner, snapshot, respx_mock, cvss_answer, output):
+    """Quiet ranking prints nothing, in any format."""
+    respx_mock.post(CVSS_LOOKUP_URL).respond(200, json=cvss_answer)
+    result = runner.invoke(app, ["rank", "-q", "--format", output, XZ])
+    assert result.exit_code == 0, result.output
+    assert result.stdout == result.stderr == ""
+
+
+def test_quiet_error(runner, snapshot):
+    """Quiet ranking silences errors: only the exit code tells."""
+    result = runner.invoke(
+        app, ["rank", "-q", "--snapshot", UNKNOWN_SNAPSHOT, GHSA]
+    )
+    assert result.exit_code == 1
+    assert result.stdout == result.stderr == ""
+
+
+def test_quiet_usage_error(runner):
+    """Quiet ranking still reports errors in the command line."""
+    result = runner.invoke(
+        app, ["rank", "-q", "--snapshot", UNKNOWN_SNAPSHOT, "--refresh", GHSA]
+    )
+    assert result.exit_code == EXIT_USAGE
+    assert "cannot be combined with --snapshot" in result.stderr
+
+
+def test_verbose(runner, feeds, respx_mock, cvss_answer):
+    """Verbose ranking prints every step on stderr, the result on stdout."""
+    respx_mock.post(CVSS_LOOKUP_URL).respond(200, json=cvss_answer)
+    result = runner.invoke(
+        app, ["rank", "-v", "--input", "-", XZ, GHSA], input=IN_KEV_DOCUMENT
+    )
+    assert result.exit_code == 0, result.output
+    assert IN_KEV in result.stdout
+    assert "Decisions:" not in result.stdout
+    logs = result.stderr.splitlines()
+    # A blank line first, as the report starts with one.
+    assert logs[0] == ""
+    assert in_order(
+        logs,
+        [
+            "IDs from the command line: 2",
+            "Detected the maat format",
+            "Findings from <stdin>: 1",
+            f"Looking for the latest snapshot in {default_root()}",
+            "No snapshot in the cache: fetching a new one",
+            "Fetching the KEV and EPSS feeds",
+            "Fetched the kev feed: ",
+            "Fetched the epss feed: ",
+            "Created snapshot ",
+            "Findings: read 3, kept 3 ",
+            "Vulnerabilities: 3, CVEs 2",
+            "Reading the kev feed: ",
+            "KEV: listed 1, not listed 1",
+            "Reading the epss feed: ",
+            "EPSS: scored 1, not scored 1",
+            "CVSS: from the input 1, cached in the snapshot 0, to look up 1",
+            "Looking up CVSS in Vulnerability-Lookup: CVEs 1, requests 1",
+            f"POST {CVSS_LOOKUP_URL}: HTTP 200, ",
+            "CVSS lookup: found 1, no CVSS 0, failed 0;",
+            "Decisions: 3, CRITICAL 1, HIGH 1, MEDIUM 0, LOW 0, unscored 1",
+        ],
+    ), logs
+    for url in (KEV_URL, EPSS_URL):
+        assert any(line.startswith(f"GET {url}: HTTP 200") for line in logs)
+
+
+def test_verbose_colour(runner, snapshot, monkeypatch):
+    """A terminal shows the steps in grey; the handler goes with the run."""
+    monkeypatch.setenv("FORCE_COLOR", "1")
+    result = runner.invoke(app, ["rank", "-v", GHSA])
+    assert result.exit_code == 0, result.output
+    step = next(line for line in result.stderr.splitlines() if line)
+    assert step.startswith("\x1b[")
+    assert "IDs from the command line: 1" in step
+    assert not logging.getLogger("maat_vuln").handlers
+
+
+def test_quiet_and_verbose(runner):
+    """Quiet and verbose modes cannot be combined."""
+    result = runner.invoke(app, ["rank", "-q", "-v", GHSA])
+    assert result.exit_code == EXIT_USAGE
+    assert "cannot be combined with --verbose" in result.stderr
+
+
+@pytest.mark.parametrize(
+    ("args", "step"),
+    [
+        ([], "Using the latest snapshot {id}, created "),
+        (["--snapshot", "{id}"], "Loading snapshot {id}, given by --snapshot"),
+        (["--refresh"], "Fetching a new snapshot, as --refresh asks"),
+    ],
+)
+def test_verbose_snapshot_choice(runner, snapshot, request, args, step):
+    """Verbose ranking tells which snapshot it uses, and why."""
+    if "--refresh" in args:
+        request.getfixturevalue("feeds")
+    snapshot_id = snapshot.manifest.snapshot_id
+    args = [arg.format(id=snapshot_id) for arg in args]
+    result = runner.invoke(app, ["rank", "-v", *args, GHSA])
+    assert result.exit_code == 0, result.output
+    assert in_order(result.stderr.splitlines(), [step.format(id=snapshot_id)])
 
 
 @pytest.mark.parametrize(
