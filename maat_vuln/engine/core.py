@@ -8,6 +8,7 @@ facade for callers without an event loop.
 
 import asyncio
 import hashlib
+import logging
 from collections import Counter
 from collections.abc import Callable, Coroutine, Iterable
 from datetime import UTC, datetime
@@ -61,6 +62,8 @@ MAAT_VERSION = version("maat-vuln")
 INPUT_SOURCE = "input"
 UNSCORED = "unscored"
 
+logger = logging.getLogger(__name__)
+
 
 def _feed_content(snapshot: Snapshot, name: str) -> bytes:
     """Read a feed file of the snapshot, checked against its hash.
@@ -86,7 +89,13 @@ def _feed_content(snapshot: Snapshot, name: str) -> bytes:
             f"{record.filename} of snapshot {snapshot_id} does not match"
             " its hash"
         )
+    logger.info("Reading the %s feed: %s", name, _versions(record.version))
     return content
+
+
+def _versions(version: dict[str, str]) -> str:
+    """Word a feed's version info, e.g. ``catalogVersion 2026.10.22``."""
+    return ", ".join(f"{key} {value}" for key, value in version.items())
 
 
 def _signals(
@@ -128,6 +137,7 @@ async def aprioritize(
     Raises:
         SnapshotError: a feed file of the snapshot is missing or altered.
     """
+    findings = list(findings)
     merged = merge_findings(findings)
     # Signals are per vulnerability, so the input CVSS of every finding
     # of a vulnerability applies to all of them.
@@ -142,15 +152,42 @@ async def aprioritize(
         for vuln_id, values in inputs.items()
     }
     cves = sorted(i for i in input_values if CVE_PATTERN.fullmatch(i))
+    logger.info(
+        "Findings: read %d, kept %d after splitting advisories per CVE and"
+        " merging duplicates",
+        len(findings),
+        len(merged),
+    )
+    logger.info("Vulnerabilities: %d, CVEs %d", len(input_values), len(cves))
     kev = parse_kev(_feed_content(snapshot, KEV_FEED_NAME))
+    listed = sum(c in kev for c in cves)
+    logger.info("KEV: listed %d, not listed %d", listed, len(cves) - listed)
     epss = parse_epss(_feed_content(snapshot, EPSS_FEED_NAME), cves)
+    logger.info(
+        "EPSS: scored %d, not scored %d", len(epss), len(cves) - len(epss)
+    )
     cvss = read_cvss(snapshot)
     to_look_up = [c for c in cves if not input_values[c] and c not in cvss]
+    logger.info(
+        "CVSS: from the input %d, cached in the snapshot %d, to look up %d",
+        sum(bool(values) for values in input_values.values()),
+        sum(not input_values[c] and c in cvss for c in cves),
+        len(to_look_up),
+    )
     if to_look_up:
         async with HttpClient(concurrency) as client:
             entries = await lookup_cvss(client, to_look_up)
         append_cvss(snapshot, entries)
         cvss |= {entry.id: entry for entry in entries}
+        found = sum(entry.values is not None for entry in entries)
+        logger.info(
+            "CVSS lookup: found %d, no CVSS %d, failed %d; added to the"
+            " snapshot cache %d",
+            found,
+            len(entries) - found,
+            len(to_look_up) - len(entries),
+            len(entries),
+        )
     signals = {
         vuln_id: _signals(vuln_id, values, kev, epss, cvss)
         for vuln_id, values in input_values.items()
@@ -160,6 +197,11 @@ async def aprioritize(
         decide(finding, signals[finding.id], snapshot_id) for finding in merged
     )
     counts = Counter(d.priority or UNSCORED for d in decisions)
+    logger.info(
+        "Decisions: %d, %s",
+        len(decisions),
+        ", ".join(f"{key} {counts[key]}" for key in Summary.model_fields),
+    )
     return Report(
         generated_at=datetime.now(UTC),
         maat_version=MAAT_VERSION,
@@ -178,8 +220,13 @@ async def afetch_snapshot(root: Path | None = None) -> Snapshot:
     Raises:
         FetchError: a feed could not be fetched or is malformed.
     """
+    logger.info("Fetching the KEV and EPSS feeds")
     async with HttpClient() as client:
         feeds = await asyncio.gather(fetch_kev(client), fetch_epss(client))
+    for feed in feeds:
+        logger.info(
+            "Fetched the %s feed: %s", feed.name, _versions(feed.version)
+        )
     return create_snapshot(list(feeds), root)
 
 

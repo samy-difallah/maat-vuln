@@ -163,9 +163,10 @@ Findings can also come from the JSON output of SCA tools. An adapter turns a doc
 
 The CLI of §5, completed for daily and scripted use. Every option below is operational: none changes a verdict.
 
-- **Global options**: given before the command (`maat -q rank …`), they apply to every command: `-V/--version`, `-q/--quiet`, `-v/--verbose`, `--cache-dir DIR`, `--config FILE`.
+- **Global options**: given before the command (`maat --cache-dir DIR rank …`), they apply to every command: `-V/--version`, `--cache-dir DIR`, `--config FILE`.
 - **Version**: `-V/--version` prints `maat-vuln <version>` and exits.
-- **Output streams**: stdout holds only the result (table, JSON, snapshot IDs); progress, warnings and logs go to stderr. `-q/--quiet` silences stderr except errors; `-v/--verbose` adds the library's debug logs. The two cannot be combined. The library logs through `logging`, under the `maat_vuln` logger, and never configures handlers: the CLI does.
+- **Output streams**: stdout holds only the result (table, JSON, snapshot IDs); progress, warnings and logs go to stderr. The library logs through `logging`, under the `maat_vuln` logger, and never configures handlers: the CLI does.
+- **Quiet and verbose modes** (`rank`): `-q/--quiet` prints nothing, in any format, errors included: only the exit code tells how the run went. Errors in the command line itself are still reported. `-v/--verbose` prints every step of the processing on stderr, one plain line each, in light grey on a terminal: the snapshot it looks for, loads or fetches and why, every request to a feed with its answer, the findings read and merged, the KEV, EPSS and CVSS signals found, the CVSS lookups and what they added to the snapshot cache, and the decisions made. The two cannot be combined. They are command-line flags only, with no config key or environment variable.
 - **Cache directory**: `--cache-dir DIR` replaces the user cache of platformdirs; snapshots then live in `DIR/snapshots/`. The library already takes this location as the `root` argument of its snapshot functions.
 - **Snapshot freshness** (`rank`, `explain`): when the latest snapshot is reused and is older than `stale_after` (24 hours by default, set in the config file), a warning on stderr gives its age and suggests `--refresh` or `--max-age`. `--max-age HOURS` (a positive integer) reuses the latest snapshot only if it is younger than that, and fetches a new one otherwise; it cannot be combined with `--snapshot` or `--refresh`. A snapshot chosen with `--snapshot` never triggers the warning.
 - **Snapshot housekeeping**:
@@ -175,7 +176,7 @@ The CLI of §5, completed for daily and scripted use. Every option below is oper
 - **Formats**: `maat formats` lists the input formats of the installed adapters (§7), one name per line, sorted.
 - **Selection** (`rank`): `--min-priority CRITICAL|HIGH|MEDIUM|LOW` keeps the decisions of that priority or above, unscored ones excluded; `--top N` then keeps the first N decisions in the sort order of §4. `--top` counts decisions, not vulnerabilities, and the cut is exact: it may split the decisions of one vulnerability, and keeps them all without warning when there are N or fewer. Both apply to the table and to JSON: the table states how many decisions it shows out of how many, the Report records the selection (§3).
 - **Environment variables**: every config key that has a flag can also be set as `MAAT_<KEY>` (`MAAT_CACHE_DIR`, `MAAT_CONCURRENCY`…).
-- **Config file**: `maat.toml`, top-level keys `cache_dir`, `concurrency`, `max_age`, `stale_after`, `format` (default of every command's `--format`), `quiet`, `verbose` and `min_priority`. An unknown key or a wrong type is an error. There is no command to read or write it.
+- **Config file**: `maat.toml`, top-level keys `cache_dir`, `concurrency`, `max_age`, `stale_after`, `format` (default of every command's `--format`) and `min_priority`. An unknown key or a wrong type is an error. There is no command to read or write it.
 - **Precedence**: flag, then `MAAT_*` variable, then config file, then default. The config file is the one given by `--config FILE`, otherwise `./maat.toml` when it exists. `--config` replaces that lookup: only its file is read, and its missing keys fall back to defaults, never to `./maat.toml`; a missing `--config` file is an error.
 
 ## 9. Roadmap

@@ -1,6 +1,7 @@
 """Adapter protocol, discovery through entry points and auto-detection."""
 
 import importlib.metadata
+import logging
 from typing import Protocol
 
 from pydantic import JsonValue
@@ -8,6 +9,8 @@ from pydantic import JsonValue
 from maat_vuln.models import Finding
 
 ENTRY_POINT_GROUP = "maat_vuln.adapters"
+
+logger = logging.getLogger(__name__)
 
 
 class Adapter(Protocol):
@@ -55,4 +58,5 @@ def load_findings(document: JsonValue) -> list[Finding]:
         names = ", ".join(adapter.name for adapter in matches)
         msg = f"ambiguous input format, matches: {names}"
         raise FormatError(msg)
+    logger.info("Detected the %s format", matches[0].name)
     return matches[0].parse(document)

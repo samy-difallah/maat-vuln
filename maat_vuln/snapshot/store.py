@@ -8,6 +8,7 @@ beside it, in ``cvss.jsonl``, outside the hash.
 
 import hashlib
 import json
+import logging
 import re
 import shutil
 import tempfile
@@ -33,6 +34,8 @@ SNAPSHOTS_DIR = "snapshots"
 MANIFEST_NAME = "manifest.json"
 CVSS_CACHE_NAME = "cvss.jsonl"
 TMP_PREFIX = ".tmp-"
+
+logger = logging.getLogger(__name__)
 
 # No separator and no leading dot: a feed file stays inside its snapshot.
 FILENAME_PATTERN = r"^[A-Za-z0-9_-][A-Za-z0-9._-]*$"
@@ -160,6 +163,7 @@ def create_snapshot(
             tmp.rename(target)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
+    logger.info("Created snapshot %s in %s", manifest.snapshot_id, root)
     return Snapshot(path=target, manifest=manifest)
 
 
@@ -198,7 +202,8 @@ def latest_snapshot(root: Path | None = None) -> Snapshot | None:
             continue
         try:
             snapshots.append(load_snapshot(path.name, root))
-        except SnapshotError:
+        except SnapshotError as error:
+            logger.info("Skipping snapshot %s: %s", path.name, error)
             continue
     return max(
         snapshots,

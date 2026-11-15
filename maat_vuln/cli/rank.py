@@ -1,7 +1,10 @@
 """``maat rank``: rank vulnerabilities by priority, as a table or JSON."""
 
 import json
+import logging
 import sys
+from collections.abc import Iterator
+from contextlib import contextmanager, nullcontext
 from typing import Annotated
 
 import typer
@@ -48,6 +51,51 @@ NUMERIC_COLUMNS = frozenset({"EPSS", "Pctl", "CVSS"})
 COMPONENT_COLUMN = "Component"
 WRAPPING_COLUMNS = frozenset({COMPONENT_COLUMN, "Rule", "Flags"})
 
+# The library logs under this logger and never configures handlers.
+LIBRARY_LOGGER = "maat_vuln"
+LOG_STYLE = "grey70"
+
+logger = logging.getLogger(__name__)
+
+
+class _StepHandler(logging.Handler):
+    """Print each log record on stderr as one light grey line."""
+
+    def __init__(self, console: Console) -> None:
+        """Print to ``console``, which colours only on a terminal."""
+        super().__init__()
+        self._console = console
+
+    def emit(self, record: logging.LogRecord) -> None:
+        """Print the record's message, never wrapped, as plain text."""
+        # Unwrapped, so URLs and IDs copy in one piece.
+        self._console.print(
+            self.format(record),
+            style=LOG_STYLE,
+            markup=False,
+            highlight=False,
+            emoji=False,
+            soft_wrap=True,
+        )
+
+
+@contextmanager
+def _verbose_steps() -> Iterator[None]:
+    """Print every processing step of the library while in the block."""
+    console = Console(stderr=True)
+    # A blank line first, as the report starts with one.
+    console.print()
+    handler = _StepHandler(console)
+    library = logging.getLogger(LIBRARY_LOGGER)
+    level = library.level
+    library.addHandler(handler)
+    library.setLevel(logging.DEBUG)
+    try:
+        yield
+    finally:
+        library.removeHandler(handler)
+        library.setLevel(level)
+
 
 def _read_findings(
     ids: list[str], documents: list[typer.FileText]
@@ -69,8 +117,12 @@ def _read_findings(
             "'-' (stdin) can be given only once", param_hint="--input"
         )
     findings = [Finding(id=vuln_id) for vuln_id in ids]
+    if ids:
+        logger.info("IDs from the command line: %d", len(ids))
     for document in documents:
-        findings += load_findings(json.loads(document.read()))
+        found = load_findings(json.loads(document.read()))
+        logger.info("Findings from %s: %d", document.name, len(found))
+        findings += found
     if not ids and not documents:
         if sys.stdin.isatty():
             raise typer.BadParameter(
@@ -81,6 +133,7 @@ def _read_findings(
             for line in sys.stdin.read().splitlines()
             if line.strip()
         ]
+        logger.info("IDs from stdin: %d", len(findings))
     return findings
 
 
@@ -193,6 +246,16 @@ def rank(
         int,
         typer.Option(min=1, help="Maximum simultaneous CVSS lookups."),
     ] = DEFAULT_CONCURRENCY,
+    quiet: Annotated[
+        bool,
+        typer.Option("--quiet", "-q", help="Print nothing, not even errors."),
+    ] = False,
+    verbose: Annotated[
+        bool,
+        typer.Option(
+            "--verbose", "-v", help="Print every processing step on stderr."
+        ),
+    ] = False,
 ) -> None:
     """Rank vulnerabilities by priority, CRITICAL first.
 
@@ -202,11 +265,20 @@ def rank(
     The latest snapshot is used unless --snapshot or --refresh is given;
     one is fetched when the cache has none.
     """
-    with fail_cleanly():
+    if quiet and verbose:
+        raise typer.BadParameter(
+            "cannot be combined with --verbose", param_hint="'--quiet'"
+        )
+    with (
+        _verbose_steps() if verbose else nullcontext(),
+        fail_cleanly(quiet),
+    ):
         findings = _read_findings(ids or [], documents or [])
         report = prioritize(
             findings, resolve_snapshot(snapshot_id, refresh), concurrency
         )
+    if quiet:
+        return
     if output is OutputFormat.JSON:
         typer.echo(report.model_dump_json(indent=2))
     else:
