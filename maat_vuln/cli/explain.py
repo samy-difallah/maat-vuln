@@ -158,6 +158,7 @@ def _print_decision(decision: Decision, snapshot: Snapshot) -> None:
 
 
 def explain(
+    ctx: typer.Context,
     vuln_id: Annotated[
         str, typer.Argument(metavar="ID", help="Vulnerability ID.")
     ],
@@ -185,7 +186,7 @@ def explain(
     component = Component(purl=purl) if purl else None
     with fail_cleanly():
         finding = Finding(id=vuln_id, component=component)
-        snapshot = resolve_snapshot(snapshot_id, refresh)
+        snapshot = resolve_snapshot(snapshot_id, refresh, ctx.obj)
         decision = prioritize([finding], snapshot).decisions[0]
     if output is OutputFormat.JSON:
         typer.echo(decision.model_dump_json(indent=2))

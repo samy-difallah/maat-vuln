@@ -6,6 +6,7 @@ its own module; this one assembles them into the ``maat`` app.
 """
 
 from importlib.metadata import version
+from pathlib import Path
 from typing import Annotated
 
 import typer
@@ -13,6 +14,7 @@ import typer
 from maat_vuln.cli.explain import explain
 from maat_vuln.cli.rank import rank
 from maat_vuln.cli.snapshot import snapshot_fetch, snapshot_show
+from maat_vuln.snapshot import SNAPSHOTS_DIR, default_root
 
 app = typer.Typer(no_args_is_help=True, add_completion=False)
 snapshot_app = typer.Typer(no_args_is_help=True)
@@ -41,6 +43,7 @@ def print_version(value: bool) -> None:
 
 @app.callback()
 def main(
+    ctx: typer.Context,
     _version: Annotated[
         bool,
         typer.Option(
@@ -51,5 +54,18 @@ def main(
             help="Print the version and exit.",
         ),
     ] = False,
+    cache_dir: Annotated[
+        Path | None,
+        typer.Option(
+            metavar="DIR",
+            envvar="MAAT_CACHE_DIR",
+            file_okay=False,
+            help="Cache directory, the user cache if none.",
+        ),
+    ] = None,
 ) -> None:
     """Maat: exploitation-driven vulnerability prioritization."""
+    # The commands read the snapshot directory from the context object.
+    ctx.obj = (
+        default_root() if cache_dir is None else cache_dir / SNAPSHOTS_DIR
+    )
