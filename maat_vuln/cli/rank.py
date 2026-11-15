@@ -217,6 +217,7 @@ def _print_table(report: Report) -> None:
 
 
 def rank(
+    ctx: typer.Context,
     ids: Annotated[
         list[str] | None,
         typer.Argument(
@@ -275,7 +276,9 @@ def rank(
     ):
         findings = _read_findings(ids or [], documents or [])
         report = prioritize(
-            findings, resolve_snapshot(snapshot_id, refresh), concurrency
+            findings,
+            resolve_snapshot(snapshot_id, refresh, ctx.obj),
+            concurrency,
         )
     if quiet:
         return

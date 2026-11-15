@@ -26,13 +26,13 @@ FEED_INDENT = "  "
 FETCH_STATUS = "Fetching the KEV and EPSS feeds…"
 
 
-def snapshot_fetch() -> None:
+def snapshot_fetch(ctx: typer.Context) -> None:
     """Fetch the KEV and EPSS feeds into a new snapshot; print its ID."""
     # Progress and feed versions go to stderr: stdout holds only the ID,
     # so scripts can capture it.
     console = Console(stderr=True)
     with fail_cleanly(), console.status(FETCH_STATUS):
-        snapshot = fetch_snapshot()
+        snapshot = fetch_snapshot(ctx.obj)
     print_fields(
         console,
         [
@@ -77,6 +77,7 @@ def _print_snapshot(snapshot: Snapshot) -> None:
 
 
 def snapshot_show(
+    ctx: typer.Context,
     snapshot_id: Annotated[
         str | None,
         typer.Argument(metavar="[ID]", help="Snapshot ID, latest if none."),
@@ -88,9 +89,9 @@ def snapshot_show(
     """Show a snapshot's manifest: its feeds, versions and hashes."""
     with fail_cleanly():
         snapshot = (
-            latest_snapshot()
+            latest_snapshot(ctx.obj)
             if snapshot_id is None
-            else load_snapshot(snapshot_id)
+            else load_snapshot(snapshot_id, ctx.obj)
         )
     if snapshot is None:
         typer.echo(

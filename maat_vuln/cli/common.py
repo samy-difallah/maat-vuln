@@ -6,6 +6,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import UTC, datetime
 from enum import StrEnum
+from pathlib import Path
 
 import typer
 from pydantic import ValidationError
@@ -19,7 +20,6 @@ from maat_vuln.models import PRIORITIES, Priority
 from maat_vuln.snapshot import (
     Snapshot,
     SnapshotError,
-    default_root,
     latest_snapshot,
     load_snapshot,
 )
@@ -86,8 +86,15 @@ def fail_cleanly(quiet: bool = False) -> Iterator[None]:
         raise typer.Exit(EXIT_ERROR) from error
 
 
-def resolve_snapshot(snapshot_id: str | None, refresh: bool) -> Snapshot:
+def resolve_snapshot(
+    snapshot_id: str | None, refresh: bool, root: Path
+) -> Snapshot:
     """Load the requested snapshot, else the latest, else fetch one.
+
+    Args:
+        snapshot_id: Snapshot to load, given by ``--snapshot``.
+        refresh: Fetch a new snapshot, as ``--refresh`` asks.
+        root: Directory holding the snapshots.
 
     Raises:
         typer.BadParameter: both a snapshot ID and refresh are given.
@@ -100,12 +107,12 @@ def resolve_snapshot(snapshot_id: str | None, refresh: bool) -> Snapshot:
         )
     if snapshot_id is not None:
         logger.info("Loading snapshot %s, given by --snapshot", snapshot_id)
-        return load_snapshot(snapshot_id)
+        return load_snapshot(snapshot_id, root)
     if refresh:
         logger.info("Fetching a new snapshot, as --refresh asks")
-        return fetch_snapshot()
-    logger.info("Looking for the latest snapshot in %s", default_root())
-    if (snapshot := latest_snapshot()) is not None:
+        return fetch_snapshot(root)
+    logger.info("Looking for the latest snapshot in %s", root)
+    if (snapshot := latest_snapshot(root)) is not None:
         logger.info(
             "Using the latest snapshot %s, created %s",
             snapshot.manifest.snapshot_id,
@@ -113,7 +120,7 @@ def resolve_snapshot(snapshot_id: str | None, refresh: bool) -> Snapshot:
         )
         return snapshot
     logger.info("No snapshot in the cache: fetching a new one")
-    return fetch_snapshot()
+    return fetch_snapshot(root)
 
 
 def priority_label(priority: Priority | None) -> str:

@@ -3,6 +3,7 @@
 from maat_vuln.snapshot.store import (
     CVSS_CACHE_NAME,
     MANIFEST_NAME,
+    SNAPSHOTS_DIR,
     CvssEntry,
     FeedRecord,
     Manifest,
@@ -22,6 +23,7 @@ from maat_vuln.snapshot.store import (
 __all__ = [
     "CVSS_CACHE_NAME",
     "MANIFEST_NAME",
+    "SNAPSHOTS_DIR",
     "CvssEntry",
     "FeedRecord",
     "Manifest",
