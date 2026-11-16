@@ -20,6 +20,7 @@ UNKNOWN_SNAPSHOT = "0" * 64
 # Click exits with 2 on usage errors.
 EXIT_USAGE = 2
 NARROW = 80
+MAX_AGE_VARIABLE = "MAAT_MAX_AGE"
 
 IN_KEV_DOCUMENT = json.dumps(
     {
@@ -239,6 +240,29 @@ def test_empty_cache_fetches(runner, feeds):
     result = runner.invoke(app, ["rank", "--format", "json", GHSA])
     assert ranked(result) == [(GHSA, None)]
     assert latest_snapshot() is not None
+
+
+def test_max_age_variable(runner, snapshot, aged, feeds):
+    """MAAT_MAX_AGE sets --max-age."""
+    aged(30)
+    result = runner.invoke(
+        app, ["rank", "--format", "json", GHSA], env={MAX_AGE_VARIABLE: "12"}
+    )
+    assert result.exit_code == 0, result.output
+    report = Report.model_validate_json(result.stdout)
+    assert report.snapshot_id != snapshot.manifest.snapshot_id
+
+
+@pytest.mark.parametrize("args", [["--snapshot", "{id}"], ["--refresh"]])
+def test_max_age_variable_gives_way(runner, snapshot, feeds, args):
+    """MAAT_MAX_AGE is ignored with --snapshot or --refresh."""
+    args = [arg.format(id=snapshot.manifest.snapshot_id) for arg in args]
+    result = runner.invoke(
+        app,
+        ["rank", "--format", "json", *args, GHSA],
+        env={MAX_AGE_VARIABLE: "12"},
+    )
+    assert ranked(result) == [(GHSA, None)]
 
 
 @pytest.mark.parametrize(

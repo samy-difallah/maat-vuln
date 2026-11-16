@@ -39,6 +39,8 @@ FETCH_STATUS = "Fetching the KEV and EPSS feeds…"
 # Age past which reusing the latest snapshot warns, unless --max-age.
 STALE_AFTER = timedelta(hours=24)
 HOUR = timedelta(hours=1)
+# Name of Click's ParameterSource for a value typed on the command line.
+COMMAND_LINE = "COMMANDLINE"
 logger = logging.getLogger(__name__)
 
 
@@ -105,9 +107,9 @@ def fetch_with_status(root: Path, status: bool = True) -> Snapshot:
 
 
 def resolve_snapshot(
+    ctx: typer.Context,
     snapshot_id: str | None,
     refresh: bool,
-    root: Path,
     max_age: int | None = None,
     quiet: bool = False,
     verbose: bool = False,
@@ -120,15 +122,15 @@ def resolve_snapshot(
     Args:
         snapshot_id: Snapshot to load, given by ``--snapshot``.
         refresh: Fetch a new snapshot, as ``--refresh`` asks.
-        root: Directory holding the snapshots.
+        ctx: Context of the command, holding the snapshot directory.
         max_age: Reuse the latest snapshot only if younger than this
-            many hours, as ``--max-age`` asks.
+            many hours, as ``--max-age`` or ``MAAT_MAX_AGE`` asks.
         quiet: Leave out the stale snapshot warning and the spinner.
         verbose: Leave out the spinner, as the steps show progress.
 
     Raises:
-        typer.BadParameter: --snapshot, --refresh and --max-age are
-            combined.
+        typer.BadParameter: --snapshot, --refresh and a typed
+            --max-age are combined.
         SnapshotError: the snapshot is unknown or inconsistent.
         FetchError: a feed could not be fetched.
     """
@@ -136,11 +138,18 @@ def resolve_snapshot(
         raise typer.BadParameter(
             "cannot be combined with --snapshot", param_hint="'--refresh'"
         )
-    if max_age is not None and (snapshot_id is not None or refresh):
+    # A max_age not typed gives way to --snapshot and --refresh, as
+    # flags beat variables.
+    if (
+        max_age is not None
+        and (snapshot_id is not None or refresh)
+        and ctx.get_parameter_source("max_age").name == COMMAND_LINE
+    ):
         raise typer.BadParameter(
             "cannot be combined with --snapshot or --refresh",
             param_hint="'--max-age'",
         )
+    root = ctx.obj
     status = not (quiet or verbose)
     if snapshot_id is not None:
         logger.info("Loading snapshot %s, given by --snapshot", snapshot_id)

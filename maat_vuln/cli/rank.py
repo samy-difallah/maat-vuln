@@ -248,6 +248,7 @@ def rank(
         typer.Option(
             min=1,
             metavar="HOURS",
+            envvar="MAAT_MAX_AGE",
             help="Reuse the latest snapshot only if younger than HOURS,"
             " else fetch a new one.",
         ),
@@ -288,7 +289,7 @@ def rank(
         report = prioritize(
             findings,
             resolve_snapshot(
-                snapshot_id, refresh, ctx.obj, max_age, quiet, verbose
+                ctx, snapshot_id, refresh, max_age, quiet, verbose
             ),
             concurrency,
         )
