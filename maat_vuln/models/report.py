@@ -4,7 +4,7 @@ from datetime import UTC
 from enum import StrEnum
 from typing import Annotated, Literal, get_args
 
-from pydantic import AfterValidator, AwareDatetime, Field
+from pydantic import MISSING, AfterValidator, AwareDatetime, Field
 
 from maat_vuln.models.finding import FindingKey, Provenance
 from maat_vuln.models.input import SCHEMA_VERSION
@@ -76,6 +76,14 @@ class Summary(OutputModel):
     unscored: Count
 
 
+class Selection(OutputModel):
+    """Part of the decisions a report keeps, and how many there were."""
+
+    min_priority: Priority | MISSING = MISSING
+    top: Annotated[int, Field(ge=1)] | MISSING = MISSING
+    total: Count
+
+
 class Report(OutputModel):
     """Top-level output document: sorted decisions and their summary."""
 
@@ -86,3 +94,4 @@ class Report(OutputModel):
     snapshot_id: SnapshotId
     decisions: list[Decision]
     summary: Summary
+    selection: Selection | MISSING = MISSING
