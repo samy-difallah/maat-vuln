@@ -167,6 +167,7 @@ source_modules = ["maat_vuln.*", "tests"]
 forbidden_modules = [
     "maat_vuln.cli.common",
     "maat_vuln.cli.explain",
+    "maat_vuln.cli.formats",
     "maat_vuln.cli.main",
     "maat_vuln.cli.rank",
     "maat_vuln.cli.snapshot",
