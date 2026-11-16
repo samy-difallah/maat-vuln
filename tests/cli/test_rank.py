@@ -21,6 +21,7 @@ UNKNOWN_SNAPSHOT = "0" * 64
 EXIT_USAGE = 2
 NARROW = 80
 MAX_AGE_VARIABLE = "MAAT_MAX_AGE"
+MIN_PRIORITY_VARIABLE = "MAAT_MIN_PRIORITY"
 
 IN_KEV_DOCUMENT = json.dumps(
     {
@@ -78,6 +79,7 @@ def test_table(runner, snapshot, respx_mock, cvss_answer):
         "CRITICAL 0 · HIGH 1 · MEDIUM 0 · LOW 0 · unscored 1"
     )
     assert lines[summary + 2] == f"snapshot {snapshot.manifest.snapshot_id}"
+    assert "decisions shown" not in result.stdout
     # Blank lines frame the output and set the summary apart.
     assert lines[0] == lines[summary - 1] == lines[summary + 1] == ""
     assert lines[-1] == ""
@@ -117,6 +119,8 @@ def test_json(runner, snapshot, respx_mock, cvss_answer):
     assert ranked(result) == [(XZ, "HIGH"), (GHSA, None)]
     report = Report.model_validate_json(result.stdout)
     assert report.snapshot_id == snapshot.manifest.snapshot_id
+    # Every decision is kept: there is no selection.
+    assert "selection" not in json.loads(result.stdout)
 
 
 def test_input_file_with_arguments(runner, snapshot, tmp_path):
@@ -523,3 +527,88 @@ def test_invalid_input(runner, snapshot, args, stdin, message):
     result = runner.invoke(app, ["rank", *args], input=stdin)
     assert result.exit_code == 1
     assert result.stderr == message + "\n"
+
+
+def rank_three(runner, *args, env=None):
+    """Rank a CRITICAL, a HIGH and an unscored finding, as JSON."""
+    return runner.invoke(
+        app,
+        ["rank", "--format", "json", *args, "--input", "-", XZ, GHSA],
+        input=IN_KEV_DOCUMENT,
+        env=env,
+    )
+
+
+@pytest.mark.parametrize(
+    ("args", "env", "kept", "selection"),
+    [
+        (
+            ["--min-priority", "HIGH"],
+            None,
+            [(IN_KEV, "CRITICAL"), (XZ, "HIGH")],
+            {"min_priority": "HIGH", "total": 3},
+        ),
+        (
+            [],
+            {MIN_PRIORITY_VARIABLE: "CRITICAL"},
+            [(IN_KEV, "CRITICAL")],
+            {"min_priority": "CRITICAL", "total": 3},
+        ),
+        (
+            ["--top", "1"],
+            None,
+            [(IN_KEV, "CRITICAL")],
+            {"top": 1, "total": 3},
+        ),
+        # Unscored decisions are left out before --top counts.
+        (
+            ["--min-priority", "LOW", "--top", "5"],
+            None,
+            [(IN_KEV, "CRITICAL"), (XZ, "HIGH")],
+            {"min_priority": "LOW", "top": 5, "total": 3},
+        ),
+    ],
+)
+def test_selection(
+    runner, snapshot, respx_mock, cvss_answer, args, env, kept, selection
+):
+    """The report keeps the selected decisions and records the selection."""
+    respx_mock.post(CVSS_LOOKUP_URL).respond(200, json=cvss_answer)
+    result = rank_three(runner, *args, env=env)
+    assert ranked(result) == kept
+    report = json.loads(result.stdout)
+    assert report["selection"] == selection
+    # The summary still counts every decision.
+    assert report["summary"] == {
+        "CRITICAL": 1,
+        "HIGH": 1,
+        "MEDIUM": 0,
+        "LOW": 0,
+        "unscored": 1,
+    }
+
+
+def test_selection_table(runner, snapshot, respx_mock, cvss_answer):
+    """The table says how many decisions it shows out of how many."""
+    respx_mock.post(CVSS_LOOKUP_URL).respond(200, json=cvss_answer)
+    result = runner.invoke(
+        app,
+        ["rank", "--top", "1", "--input", "-", XZ, GHSA],
+        input=IN_KEV_DOCUMENT,
+    )
+    assert result.exit_code == 0, result.output
+    assert IN_KEV in result.stdout
+    assert XZ not in result.stdout
+    lines = result.stdout.splitlines()
+    shown = lines.index("1 of 3 decisions shown")
+    assert lines[shown + 2] == (
+        "CRITICAL 1 · HIGH 1 · MEDIUM 0 · LOW 0 · unscored 1"
+    )
+
+
+def test_selection_verbose(runner, snapshot, respx_mock, cvss_answer):
+    """Verbose mode prints how many decisions the selection kept."""
+    respx_mock.post(CVSS_LOOKUP_URL).respond(200, json=cvss_answer)
+    result = rank_three(runner, "-v", "--top", "2")
+    assert result.exit_code == 0, result.output
+    assert "Selected decisions: 2 of 3" in result.stderr.splitlines()
