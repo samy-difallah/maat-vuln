@@ -4,7 +4,7 @@ import json
 import logging
 from collections.abc import Iterator
 from contextlib import contextmanager
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from enum import StrEnum
 from pathlib import Path
 
@@ -35,6 +35,9 @@ PRIORITY_STYLES = {
     "LOW": "cyan",
 }
 UNSCORED = "unscored"
+# Age past which reusing the latest snapshot warns, unless --max-age.
+STALE_AFTER = timedelta(hours=24)
+HOUR = timedelta(hours=1)
 logger = logging.getLogger(__name__)
 
 
@@ -87,23 +90,39 @@ def fail_cleanly(quiet: bool = False) -> Iterator[None]:
 
 
 def resolve_snapshot(
-    snapshot_id: str | None, refresh: bool, root: Path
+    snapshot_id: str | None,
+    refresh: bool,
+    root: Path,
+    max_age: int | None = None,
+    quiet: bool = False,
 ) -> Snapshot:
     """Load the requested snapshot, else the latest, else fetch one.
+
+    Reusing the latest snapshot warns on stderr when it is older than
+    ``STALE_AFTER``, unless ``max_age`` is given.
 
     Args:
         snapshot_id: Snapshot to load, given by ``--snapshot``.
         refresh: Fetch a new snapshot, as ``--refresh`` asks.
         root: Directory holding the snapshots.
+        max_age: Reuse the latest snapshot only if younger than this
+            many hours, as ``--max-age`` asks.
+        quiet: Leave out the stale snapshot warning.
 
     Raises:
-        typer.BadParameter: both a snapshot ID and refresh are given.
+        typer.BadParameter: --snapshot, --refresh and --max-age are
+            combined.
         SnapshotError: the snapshot is unknown or inconsistent.
         FetchError: a feed could not be fetched.
     """
     if snapshot_id is not None and refresh:
         raise typer.BadParameter(
             "cannot be combined with --snapshot", param_hint="'--refresh'"
+        )
+    if max_age is not None and (snapshot_id is not None or refresh):
+        raise typer.BadParameter(
+            "cannot be combined with --snapshot or --refresh",
+            param_hint="'--max-age'",
         )
     if snapshot_id is not None:
         logger.info("Loading snapshot %s, given by --snapshot", snapshot_id)
@@ -113,11 +132,26 @@ def resolve_snapshot(
         return fetch_snapshot(root)
     logger.info("Looking for the latest snapshot in %s", root)
     if (snapshot := latest_snapshot(root)) is not None:
+        age = datetime.now(UTC) - snapshot.manifest.created_at
+        if max_age is not None and age >= max_age * HOUR:
+            logger.info(
+                "The latest snapshot is %d hours old, not younger than"
+                " --max-age: fetching a new one",
+                age // HOUR,
+            )
+            return fetch_snapshot(root)
         logger.info(
             "Using the latest snapshot %s, created %s",
             snapshot.manifest.snapshot_id,
             timestamp(snapshot.manifest.created_at),
         )
+        if max_age is None and age > STALE_AFTER and not quiet:
+            typer.echo(
+                # A blank line first, as the report starts with one.
+                f"\nWarning: the latest snapshot is {age // HOUR} hours old;"
+                " use --refresh or --max-age HOURS for fresher feeds.",
+                err=True,
+            )
         return snapshot
     logger.info("No snapshot in the cache: fetching a new one")
     return fetch_snapshot(root)

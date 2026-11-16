@@ -118,6 +118,7 @@ def test_explain_json(runner, snapshot):
     [
         (["--snapshot", UNKNOWN_SNAPSHOT], 1, "unknown snapshot"),
         (["--snapshot", UNKNOWN_SNAPSHOT, "--refresh"], EXIT_USAGE, ""),
+        (["--max-age", "1", "--refresh"], EXIT_USAGE, ""),
     ],
 )
 def test_explain_snapshot_errors(runner, args, exit_code, message):
@@ -125,6 +126,31 @@ def test_explain_snapshot_errors(runner, args, exit_code, message):
     result = runner.invoke(app, ["explain", IN_KEV, *args])
     assert result.exit_code == exit_code
     assert message in result.stderr
+
+
+def test_explain_stale_snapshot(runner, aged):
+    """Explaining against a snapshot over 24 hours old warns."""
+    aged(30)
+    result = runner.invoke(app, ["explain", IN_KEV, "--format", "json"])
+    assert result.exit_code == 0, result.output
+    assert result.stderr.startswith(
+        "\nWarning: the latest snapshot is 30 hours old"
+    )
+
+
+def test_explain_max_age(
+    runner, snapshot, aged, feeds, respx_mock, cvss_answer
+):
+    """Explaining with --max-age replaces a snapshot that old."""
+    respx_mock.post(CVSS_LOOKUP_URL).respond(200, json=cvss_answer)
+    aged(30)
+    result = runner.invoke(
+        app, ["explain", IN_KEV, "--format", "json", "--max-age", "24"]
+    )
+    assert result.exit_code == 0, result.output
+    decision = Decision.model_validate_json(result.stdout)
+    assert decision.snapshot_id != snapshot.manifest.snapshot_id
+    assert result.stderr == ""
 
 
 def test_explain_invalid_id(runner, snapshot):
