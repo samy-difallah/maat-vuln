@@ -15,6 +15,7 @@ from maat_vuln.models import (
     KevSignal,
     PolicyRef,
     Report,
+    Selection,
     Signals,
     Summary,
 )
@@ -106,3 +107,15 @@ def test_summary_needs_every_priority():
     """Summary keys are fixed, zero counts included."""
     with pytest.raises(ValidationError):
         Summary.model_validate({"CRITICAL": 1})
+
+
+def test_selection_is_absent_by_default():
+    """A report that keeps every decision has no selection field."""
+    assert "selection" not in make_report().model_dump()
+
+
+def test_selection_dumps_only_given_criteria():
+    """A criterion not given is left out; the total is always there."""
+    report = make_report(selection=Selection(top=1, total=3))
+    assert report.model_dump()["selection"] == {"top": 1, "total": 3}
+    assert Report.model_validate_json(report.model_dump_json()) == report

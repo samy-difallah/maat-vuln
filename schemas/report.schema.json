@@ -347,6 +347,37 @@
       "title": "Provenance",
       "type": "object"
     },
+    "Selection": {
+      "additionalProperties": false,
+      "description": "Part of the decisions a report keeps, and how many there were.",
+      "properties": {
+        "min_priority": {
+          "enum": [
+            "CRITICAL",
+            "HIGH",
+            "MEDIUM",
+            "LOW"
+          ],
+          "title": "Min Priority",
+          "type": "string"
+        },
+        "top": {
+          "minimum": 1,
+          "title": "Top",
+          "type": "integer"
+        },
+        "total": {
+          "minimum": 0,
+          "title": "Total",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "total"
+      ],
+      "title": "Selection",
+      "type": "object"
+    },
     "Signals": {
       "additionalProperties": false,
       "description": "KEV, EPSS and CVSS signals of one vulnerability.",
@@ -423,7 +454,7 @@
   "description": "Top-level output document: sorted decisions and their summary.",
   "properties": {
     "schema_version": {
-      "default": "0.3.0",
+      "default": "0.4.0",
       "title": "Schema Version",
       "type": "string"
     },
@@ -453,6 +484,9 @@
     },
     "summary": {
       "$ref": "#/$defs/Summary"
+    },
+    "selection": {
+      "$ref": "#/$defs/Selection"
     }
   },
   "required": [

@@ -5,9 +5,11 @@ import logging
 import sys
 from collections.abc import Iterator
 from contextlib import contextmanager, nullcontext
+from enum import StrEnum
 from typing import Annotated
 
 import typer
+from pydantic import MISSING
 from rich import box
 from rich.console import Console
 from rich.table import Table
@@ -25,12 +27,14 @@ from maat_vuln.cli.common import (
 from maat_vuln.engine import prioritize
 from maat_vuln.feeds import DEFAULT_CONCURRENCY
 from maat_vuln.models import (
+    PRIORITIES,
     CvssSignal,
     Decision,
     EpssSignal,
     Finding,
     KevSignal,
     Report,
+    Selection,
 )
 
 ABSENT = "-"
@@ -56,6 +60,9 @@ LIBRARY_LOGGER = "maat_vuln"
 LOG_STYLE = "grey70"
 
 logger = logging.getLogger(__name__)
+
+# Typer offers choices from an Enum only.
+MinPriority = StrEnum("MinPriority", {p: p for p in PRIORITIES})
 
 
 class _StepHandler(logging.Handler):
@@ -137,6 +144,42 @@ def _read_findings(
     return findings
 
 
+def _select(
+    report: Report, min_priority: str | None, top: int | None
+) -> Report:
+    """Keep the decisions of min_priority or above, then the first top.
+
+    The summary still counts every decision; the selection records the
+    criteria given and the number of decisions before selection.
+    """
+    if min_priority is None and top is None:
+        return report
+    decisions = report.decisions
+    criteria: dict[str, str | int] = {}
+    if min_priority is not None:
+        rank = PRIORITIES.index(min_priority)
+        decisions = [
+            d
+            for d in decisions
+            if d.priority is not None and PRIORITIES.index(d.priority) <= rank
+        ]
+        criteria["min_priority"] = min_priority
+    if top is not None:
+        decisions = decisions[:top]
+        criteria["top"] = top
+    logger.info(
+        "Selected decisions: %d of %d", len(decisions), len(report.decisions)
+    )
+    return report.model_copy(
+        update={
+            "decisions": decisions,
+            "selection": Selection.model_validate(
+                criteria | {"total": len(report.decisions)}
+            ),
+        }
+    )
+
+
 def _table(*columns: str) -> Table:
     """Start a table with a bold header over a heavy rule, no borders."""
     # The box's blank vertical and the right padding keep columns 2 apart.
@@ -211,8 +254,17 @@ def _print_table(report: Report) -> None:
         for key, count in report.summary
     )
     snapshot = Text(f"snapshot {report.snapshot_id}")
+    selection = (
+        []
+        if report.selection is MISSING
+        else [
+            f"{len(report.decisions)} of {report.selection.total}"
+            " decisions shown",
+            "",
+        ]
+    )
     console = Console()
-    for block in ("", table, "", summary, "", snapshot, ""):
+    for block in ("", table, "", *selection, summary, "", snapshot, ""):
         console.print(block)
 
 
@@ -257,6 +309,17 @@ def rank(
         int,
         typer.Option(min=1, help="Maximum simultaneous CVSS lookups."),
     ] = DEFAULT_CONCURRENCY,
+    min_priority: Annotated[
+        MinPriority | None,
+        typer.Option(
+            envvar="MAAT_MIN_PRIORITY",
+            help="Keep the decisions of this priority or above.",
+        ),
+    ] = None,
+    top: Annotated[
+        int | None,
+        typer.Option(min=1, metavar="N", help="Keep the first N decisions."),
+    ] = None,
     quiet: Annotated[
         bool,
         typer.Option("--quiet", "-q", help="Print nothing, not even errors."),
@@ -275,7 +338,8 @@ def rank(
     With no IDs and no --input, IDs are read from stdin, one per line.
     The latest snapshot is used unless --snapshot or --refresh is given;
     one is fetched when the cache has none, or with --max-age when the
-    latest is too old.
+    latest is too old. --min-priority and --top select the decisions
+    shown; the summary counts them all.
     """
     if quiet and verbose:
         raise typer.BadParameter(
@@ -286,12 +350,16 @@ def rank(
         fail_cleanly(quiet),
     ):
         findings = _read_findings(ids or [], documents or [])
-        report = prioritize(
-            findings,
-            resolve_snapshot(
-                ctx, snapshot_id, refresh, max_age, quiet, verbose
+        report = _select(
+            prioritize(
+                findings,
+                resolve_snapshot(
+                    ctx, snapshot_id, refresh, max_age, quiet, verbose
+                ),
+                concurrency,
             ),
-            concurrency,
+            min_priority,
+            top,
         )
     if quiet:
         return
