@@ -241,6 +241,18 @@ def test_empty_cache_fetches(runner, feeds):
     assert latest_snapshot() is not None
 
 
+@pytest.mark.parametrize(
+    ("args", "spinner"), [([], True), (["-q"], False), (["-v"], False)]
+)
+def test_fetch_spinner(runner, feeds, monkeypatch, args, spinner):
+    """A terminal shows a spinner while fetching, unless quiet or verbose."""
+    monkeypatch.setenv("FORCE_COLOR", "1")
+    result = runner.invoke(app, ["rank", "--format", "json", *args, GHSA])
+    assert result.exit_code == 0, result.output
+    # The verbose step has the same words, but no ellipsis.
+    assert ("Fetching the KEV and EPSS feeds…" in result.stderr) is spinner
+
+
 def test_fetch_failure(runner, respx_mock, epss):
     """A feed that cannot be fetched fails with a message."""
     respx_mock.get(KEV_URL).respond(404)

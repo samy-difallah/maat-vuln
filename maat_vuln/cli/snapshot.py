@@ -12,10 +12,10 @@ from maat_vuln.cli.common import (
     GREY,
     OutputFormat,
     fail_cleanly,
+    fetch_with_status,
     print_fields,
     timestamp,
 )
-from maat_vuln.engine import fetch_snapshot
 from maat_vuln.snapshot import (
     Manifest,
     Snapshot,
@@ -28,7 +28,6 @@ from maat_vuln.snapshot import (
 )
 
 FEED_INDENT = "  "
-FETCH_STATUS = "Fetching the KEV and EPSS feeds…"
 EMPTY_CACHE = "no snapshot in cache, run maat snapshot fetch"
 
 
@@ -42,8 +41,8 @@ def snapshot_fetch(ctx: typer.Context) -> None:
     # Progress and feed versions go to stderr: stdout holds only the ID,
     # so scripts can capture it.
     console = Console(stderr=True)
-    with fail_cleanly(), console.status(FETCH_STATUS):
-        snapshot = fetch_snapshot(ctx.obj)
+    with fail_cleanly():
+        snapshot = fetch_with_status(ctx.obj)
     print_fields(
         console,
         [

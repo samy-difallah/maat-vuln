@@ -287,7 +287,9 @@ def rank(
         findings = _read_findings(ids or [], documents or [])
         report = prioritize(
             findings,
-            resolve_snapshot(snapshot_id, refresh, ctx.obj, max_age, quiet),
+            resolve_snapshot(
+                snapshot_id, refresh, ctx.obj, max_age, quiet, verbose
+            ),
             concurrency,
         )
     if quiet:
