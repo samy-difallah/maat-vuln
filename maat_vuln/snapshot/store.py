@@ -221,6 +221,55 @@ def latest_snapshot(root: Path | None = None) -> Snapshot | None:
     return next(iter(list_snapshots(root)), None)
 
 
+def remove_snapshots(
+    snapshot_ids: list[str], root: Path | None = None
+) -> list[str]:
+    """Delete the given snapshots and return their IDs, each once.
+
+    Every ID is checked before anything is deleted, so an unknown one
+    leaves the cache untouched. A damaged snapshot is still known: this
+    is how it gets cleared.
+
+    Raises:
+        SnapshotError: If an ID is unknown or a snapshot cannot be
+            deleted.
+    """
+    root = default_root() if root is None else root
+    ids = list(dict.fromkeys(snapshot_ids))
+    for snapshot_id in ids:
+        if not re.fullmatch(SHA256_PATTERN, snapshot_id) or not (
+            (root / snapshot_id).is_dir()
+        ):
+            raise SnapshotError(f"unknown snapshot {snapshot_id}")
+    for snapshot_id in ids:
+        try:
+            shutil.rmtree(root / snapshot_id)
+        except OSError as error:
+            # Left half deleted, it is damaged but still removable.
+            raise SnapshotError(
+                f"cannot delete snapshot {snapshot_id}: {error.strerror}"
+            ) from error
+        logger.info("Deleted snapshot %s", snapshot_id)
+    return ids
+
+
+def prune_snapshots(keep: int, root: Path | None = None) -> list[str]:
+    """Delete every snapshot but the ``keep`` newest; return their IDs.
+
+    Damaged snapshots are neither counted nor deleted, as in
+    :func:`list_snapshots`.
+
+    Raises:
+        ValueError: If ``keep`` is negative.
+    """
+    if keep < 0:
+        raise ValueError(f"keep must be 0 or more, not {keep}")
+    old = list_snapshots(root)[keep:]
+    return remove_snapshots(
+        [snapshot.manifest.snapshot_id for snapshot in old], root
+    )
+
+
 def append_cvss(snapshot: Snapshot, entries: list[CvssEntry]) -> None:
     """Append CVSS lookups to the snapshot cache, one JSON line each."""
     with (snapshot.path / CVSS_CACHE_NAME).open("a", encoding="utf-8") as f:

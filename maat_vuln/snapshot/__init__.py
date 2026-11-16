@@ -18,7 +18,9 @@ from maat_vuln.snapshot.store import (
     latest_snapshot,
     list_snapshots,
     load_snapshot,
+    prune_snapshots,
     read_cvss,
+    remove_snapshots,
 )
 
 __all__ = [
@@ -39,5 +41,7 @@ __all__ = [
     "latest_snapshot",
     "list_snapshots",
     "load_snapshot",
+    "prune_snapshots",
     "read_cvss",
+    "remove_snapshots",
 ]

@@ -1,4 +1,4 @@
-"""``maat snapshot``: fetch a new snapshot of the feeds, list or show them."""
+"""``maat snapshot``: fetch a snapshot of the feeds, list, show or delete."""
 
 from typing import Annotated
 
@@ -22,7 +22,9 @@ from maat_vuln.snapshot import (
     latest_snapshot,
     list_snapshots,
     load_snapshot,
+    prune_snapshots,
     read_cvss,
+    remove_snapshots,
 )
 
 FEED_INDENT = "  "
@@ -146,3 +148,33 @@ def snapshot_list(
     else:
         # Not an error: an empty list is a valid answer.
         typer.echo(EMPTY_CACHE.capitalize(), err=True)
+
+
+def snapshot_prune(
+    ctx: typer.Context,
+    keep: Annotated[
+        int,
+        typer.Option(
+            min=0, metavar="N", help="Number of newest snapshots to keep."
+        ),
+    ],
+) -> None:
+    """Delete every snapshot but the N newest; print the deleted IDs."""
+    with fail_cleanly():
+        pruned = prune_snapshots(keep, ctx.obj)
+    for snapshot_id in pruned:
+        typer.echo(snapshot_id)
+
+
+def snapshot_rm(
+    ctx: typer.Context,
+    snapshot_ids: Annotated[
+        list[str],
+        typer.Argument(metavar="ID...", help="Snapshot IDs to delete."),
+    ],
+) -> None:
+    """Delete the given snapshots and print their IDs."""
+    with fail_cleanly():
+        removed = remove_snapshots(snapshot_ids, ctx.obj)
+    for snapshot_id in removed:
+        typer.echo(snapshot_id)
