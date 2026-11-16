@@ -1,4 +1,4 @@
-"""Command line: ``maat rank``, ``maat explain`` and ``maat snapshot``.
+"""Command line: ``maat rank``, ``explain``, ``snapshot``, ``formats``.
 
 The CLI stays synchronous and calls the library's sync facades; it is
 the only part of Maat that writes to the terminal. Each command lives in
@@ -12,6 +12,7 @@ from typing import Annotated
 import typer
 
 from maat_vuln.cli.explain import explain
+from maat_vuln.cli.formats import formats
 from maat_vuln.cli.rank import rank
 from maat_vuln.cli.snapshot import (
     snapshot_fetch,
@@ -31,6 +32,7 @@ app.add_typer(
 )
 app.command()(rank)
 app.command()(explain)
+app.command()(formats)
 snapshot_app.command("fetch")(snapshot_fetch)
 snapshot_app.command("list")(snapshot_list)
 snapshot_app.command("show")(snapshot_show)
