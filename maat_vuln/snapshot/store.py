@@ -187,15 +187,15 @@ def load_snapshot(snapshot_id: str, root: Path | None = None) -> Snapshot:
     return Snapshot(path=path, manifest=manifest)
 
 
-def latest_snapshot(root: Path | None = None) -> Snapshot | None:
-    """Return the most recently created snapshot, if there is one.
+def list_snapshots(root: Path | None = None) -> list[Snapshot]:
+    """Return every snapshot of the cache, newest first.
 
     A damaged snapshot is skipped, so it never hides the valid ones;
     loading it by its ID still reports the damage.
     """
     root = default_root() if root is None else root
     if not root.is_dir():
-        return None
+        return []
     snapshots = []
     for path in root.iterdir():
         if not re.fullmatch(SHA256_PATTERN, path.name):
@@ -205,11 +205,20 @@ def latest_snapshot(root: Path | None = None) -> Snapshot | None:
         except SnapshotError as error:
             logger.info("Skipping snapshot %s: %s", path.name, error)
             continue
-    return max(
+    # The ID breaks ties, so the order never depends on the file system.
+    return sorted(
         snapshots,
-        key=lambda snapshot: snapshot.manifest.created_at,
-        default=None,
+        key=lambda snapshot: (
+            snapshot.manifest.created_at,
+            snapshot.manifest.snapshot_id,
+        ),
+        reverse=True,
     )
+
+
+def latest_snapshot(root: Path | None = None) -> Snapshot | None:
+    """Return the most recently created snapshot, if there is one."""
+    return next(iter(list_snapshots(root)), None)
 
 
 def append_cvss(snapshot: Snapshot, entries: list[CvssEntry]) -> None:
