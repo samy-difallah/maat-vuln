@@ -1,4 +1,4 @@
-"""Tests for ``maat snapshot fetch``, ``list`` and ``show``."""
+"""Tests for ``maat snapshot fetch``, ``list``, ``show``, ``prune``, ``rm``."""
 
 import re
 from datetime import UTC, datetime
@@ -14,8 +14,10 @@ from maat_vuln.snapshot import (
     create_snapshot,
     default_root,
     latest_snapshot,
+    list_snapshots,
 )
 
+EXIT_USAGE = 2
 UNKNOWN_SNAPSHOT = "0" * 64
 
 
@@ -146,3 +148,63 @@ def test_snapshot_list_empty_cache(runner, output):
     else:
         assert result.stdout == ""
         assert "run maat snapshot fetch" in result.stderr
+
+
+@pytest.mark.parametrize("keep", [0, 1, 2])
+def test_snapshot_prune(runner, snapshot, newer, keep):
+    """Prune keeps the N newest snapshots and prints the deleted IDs."""
+    snapshots = [newer, snapshot]
+    result = runner.invoke(app, ["snapshot", "prune", "--keep", str(keep)])
+    assert result.exit_code == 0, result.output
+    assert result.stdout.split() == [
+        old.manifest.snapshot_id for old in snapshots[keep:]
+    ]
+    assert list_snapshots() == snapshots[:keep]
+
+
+def test_snapshot_prune_needs_keep(runner, snapshot):
+    """--keep is required and cannot be negative."""
+    for args in ([], ["--keep", "-1"]):
+        result = runner.invoke(app, ["snapshot", "prune", *args])
+        assert result.exit_code == EXIT_USAGE
+    assert list_snapshots() == [snapshot]
+
+
+def test_snapshot_rm(runner, snapshot, newer):
+    """Rm deletes the given snapshots and prints their IDs."""
+    snapshot_id = snapshot.manifest.snapshot_id
+    result = runner.invoke(app, ["snapshot", "rm", snapshot_id, snapshot_id])
+    assert result.exit_code == 0, result.output
+    assert result.stdout == f"{snapshot_id}\n"
+    assert list_snapshots() == [newer]
+
+
+def test_snapshot_rm_unknown(runner, snapshot, newer):
+    """An unknown ID is an error, and nothing is deleted."""
+    args = [newer.manifest.snapshot_id, UNKNOWN_SNAPSHOT]
+    result = runner.invoke(app, ["snapshot", "rm", *args])
+    assert result.exit_code == 1
+    assert result.stdout == ""
+    assert f"unknown snapshot {UNKNOWN_SNAPSHOT}" in result.stderr
+    assert list_snapshots() == [newer, snapshot]
+
+
+@pytest.mark.parametrize(
+    "args", [["prune", "--keep", "0"], ["rm", "SNAPSHOT_ID"]]
+)
+def test_snapshot_delete_failure(runner, snapshot, monkeypatch, args):
+    """A snapshot that cannot be deleted fails with a message."""
+
+    def refuse(path):
+        """Fail as a read-only cache would."""
+        raise PermissionError(13, "Permission denied", str(path))
+
+    monkeypatch.setattr("shutil.rmtree", refuse)
+    snapshot_id = snapshot.manifest.snapshot_id
+    args = [snapshot_id if arg == "SNAPSHOT_ID" else arg for arg in args]
+    result = runner.invoke(app, ["snapshot", *args])
+    assert result.exit_code == 1
+    assert result.stdout == ""
+    assert result.stderr == (
+        f"Error: cannot delete snapshot {snapshot_id}: Permission denied\n"
+    )

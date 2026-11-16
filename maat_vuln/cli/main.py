@@ -16,6 +16,8 @@ from maat_vuln.cli.rank import rank
 from maat_vuln.cli.snapshot import (
     snapshot_fetch,
     snapshot_list,
+    snapshot_prune,
+    snapshot_rm,
     snapshot_show,
 )
 from maat_vuln.snapshot import SNAPSHOTS_DIR, default_root
@@ -23,13 +25,17 @@ from maat_vuln.snapshot import SNAPSHOTS_DIR, default_root
 app = typer.Typer(no_args_is_help=True, add_completion=False)
 snapshot_app = typer.Typer(no_args_is_help=True)
 app.add_typer(
-    snapshot_app, name="snapshot", help="Fetch, list or show feed snapshots."
+    snapshot_app,
+    name="snapshot",
+    help="Fetch, list, show or delete feed snapshots.",
 )
 app.command()(rank)
 app.command()(explain)
 snapshot_app.command("fetch")(snapshot_fetch)
 snapshot_app.command("list")(snapshot_list)
 snapshot_app.command("show")(snapshot_show)
+snapshot_app.command("prune")(snapshot_prune)
+snapshot_app.command("rm")(snapshot_rm)
 
 
 def print_version(value: bool) -> None:
