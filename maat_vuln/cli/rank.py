@@ -243,6 +243,16 @@ def rank(
         bool,
         typer.Option("--refresh", help="Fetch a new snapshot first."),
     ] = False,
+    max_age: Annotated[
+        int | None,
+        typer.Option(
+            min=1,
+            metavar="HOURS",
+            envvar="MAAT_MAX_AGE",
+            help="Reuse the latest snapshot only if younger than HOURS,"
+            " else fetch a new one.",
+        ),
+    ] = None,
     concurrency: Annotated[
         int,
         typer.Option(min=1, help="Maximum simultaneous CVSS lookups."),
@@ -264,7 +274,8 @@ def rank(
     together; findings of the same vulnerability and component merge.
     With no IDs and no --input, IDs are read from stdin, one per line.
     The latest snapshot is used unless --snapshot or --refresh is given;
-    one is fetched when the cache has none.
+    one is fetched when the cache has none, or with --max-age when the
+    latest is too old.
     """
     if quiet and verbose:
         raise typer.BadParameter(
@@ -277,7 +288,9 @@ def rank(
         findings = _read_findings(ids or [], documents or [])
         report = prioritize(
             findings,
-            resolve_snapshot(snapshot_id, refresh, ctx.obj),
+            resolve_snapshot(
+                ctx, snapshot_id, refresh, max_age, quiet, verbose
+            ),
             concurrency,
         )
     if quiet:

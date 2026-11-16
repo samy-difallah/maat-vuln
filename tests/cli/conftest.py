@@ -2,7 +2,7 @@
 
 import gzip
 import json
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -72,6 +72,26 @@ def snapshot(kev, epss):
         ],
         root=default_root(),
     )
+
+
+@pytest.fixture
+def aged(snapshot, monkeypatch):
+    """Return a function making the snapshot look so many hours old."""
+
+    def age(hours):
+        later = snapshot.manifest.created_at + timedelta(hours=hours)
+
+        class Later(datetime):
+            """Clock stopped ``hours`` after the snapshot was created."""
+
+            @classmethod
+            def now(cls, tz=None):
+                """Return the stopped moment."""
+                return later
+
+        monkeypatch.setattr("maat_vuln.cli.common.datetime", Later)
+
+    return age
 
 
 @pytest.fixture

@@ -3,8 +3,8 @@
 import json
 import logging
 from collections.abc import Iterator
-from contextlib import contextmanager
-from datetime import UTC, datetime
+from contextlib import contextmanager, nullcontext
+from datetime import UTC, datetime, timedelta
 from enum import StrEnum
 from pathlib import Path
 
@@ -35,6 +35,12 @@ PRIORITY_STYLES = {
     "LOW": "cyan",
 }
 UNSCORED = "unscored"
+FETCH_STATUS = "Fetching the KEV and EPSS feeds…"
+# Age past which reusing the latest snapshot warns, unless --max-age.
+STALE_AFTER = timedelta(hours=24)
+HOUR = timedelta(hours=1)
+# Name of Click's ParameterSource for a value typed on the command line.
+COMMAND_LINE = "COMMANDLINE"
 logger = logging.getLogger(__name__)
 
 
@@ -86,18 +92,45 @@ def fail_cleanly(quiet: bool = False) -> Iterator[None]:
         raise typer.Exit(EXIT_ERROR) from error
 
 
+def fetch_with_status(root: Path, status: bool = True) -> Snapshot:
+    """Fetch a new snapshot, under a spinner on stderr if ``status``.
+
+    Rich shows the spinner on a terminal only, and erases it once done.
+
+    Raises:
+        FetchError: a feed could not be fetched.
+    """
+    with (
+        Console(stderr=True).status(FETCH_STATUS) if status else nullcontext()
+    ):
+        return fetch_snapshot(root)
+
+
 def resolve_snapshot(
-    snapshot_id: str | None, refresh: bool, root: Path
+    ctx: typer.Context,
+    snapshot_id: str | None,
+    refresh: bool,
+    max_age: int | None = None,
+    quiet: bool = False,
+    verbose: bool = False,
 ) -> Snapshot:
     """Load the requested snapshot, else the latest, else fetch one.
+
+    Reusing the latest snapshot warns on stderr when it is older than
+    ``STALE_AFTER``, unless ``max_age`` is given.
 
     Args:
         snapshot_id: Snapshot to load, given by ``--snapshot``.
         refresh: Fetch a new snapshot, as ``--refresh`` asks.
-        root: Directory holding the snapshots.
+        ctx: Context of the command, holding the snapshot directory.
+        max_age: Reuse the latest snapshot only if younger than this
+            many hours, as ``--max-age`` or ``MAAT_MAX_AGE`` asks.
+        quiet: Leave out the stale snapshot warning and the spinner.
+        verbose: Leave out the spinner, as the steps show progress.
 
     Raises:
-        typer.BadParameter: both a snapshot ID and refresh are given.
+        typer.BadParameter: --snapshot, --refresh and a typed
+            --max-age are combined.
         SnapshotError: the snapshot is unknown or inconsistent.
         FetchError: a feed could not be fetched.
     """
@@ -105,22 +138,50 @@ def resolve_snapshot(
         raise typer.BadParameter(
             "cannot be combined with --snapshot", param_hint="'--refresh'"
         )
+    # A max_age not typed gives way to --snapshot and --refresh, as
+    # flags beat variables.
+    if (
+        max_age is not None
+        and (snapshot_id is not None or refresh)
+        and ctx.get_parameter_source("max_age").name == COMMAND_LINE
+    ):
+        raise typer.BadParameter(
+            "cannot be combined with --snapshot or --refresh",
+            param_hint="'--max-age'",
+        )
+    root = ctx.obj
+    status = not (quiet or verbose)
     if snapshot_id is not None:
         logger.info("Loading snapshot %s, given by --snapshot", snapshot_id)
         return load_snapshot(snapshot_id, root)
     if refresh:
         logger.info("Fetching a new snapshot, as --refresh asks")
-        return fetch_snapshot(root)
+        return fetch_with_status(root, status)
     logger.info("Looking for the latest snapshot in %s", root)
     if (snapshot := latest_snapshot(root)) is not None:
+        age = datetime.now(UTC) - snapshot.manifest.created_at
+        if max_age is not None and age >= max_age * HOUR:
+            logger.info(
+                "The latest snapshot is %d hours old, not younger than"
+                " --max-age: fetching a new one",
+                age // HOUR,
+            )
+            return fetch_with_status(root, status)
         logger.info(
             "Using the latest snapshot %s, created %s",
             snapshot.manifest.snapshot_id,
             timestamp(snapshot.manifest.created_at),
         )
+        if max_age is None and age > STALE_AFTER and not quiet:
+            typer.echo(
+                # A blank line first, as the report starts with one.
+                f"\nWarning: the latest snapshot is {age // HOUR} hours old;"
+                " use --refresh or --max-age HOURS for fresher feeds.",
+                err=True,
+            )
         return snapshot
     logger.info("No snapshot in the cache: fetching a new one")
-    return fetch_snapshot(root)
+    return fetch_with_status(root, status)
 
 
 def priority_label(priority: Priority | None) -> str:

@@ -177,16 +177,27 @@ def explain(
         bool,
         typer.Option("--refresh", help="Fetch a new snapshot first."),
     ] = False,
+    max_age: Annotated[
+        int | None,
+        typer.Option(
+            min=1,
+            metavar="HOURS",
+            envvar="MAAT_MAX_AGE",
+            help="Reuse the latest snapshot only if younger than HOURS,"
+            " else fetch a new one.",
+        ),
+    ] = None,
 ) -> None:
     """Explain the priority of one vulnerability: rule and signals.
 
     The latest snapshot is used unless --snapshot or --refresh is given;
-    one is fetched when the cache has none.
+    one is fetched when the cache has none, or with --max-age when the
+    latest is too old.
     """
     component = Component(purl=purl) if purl else None
     with fail_cleanly():
         finding = Finding(id=vuln_id, component=component)
-        snapshot = resolve_snapshot(snapshot_id, refresh, ctx.obj)
+        snapshot = resolve_snapshot(ctx, snapshot_id, refresh, max_age)
         decision = prioritize([finding], snapshot).decisions[0]
     if output is OutputFormat.JSON:
         typer.echo(decision.model_dump_json(indent=2))

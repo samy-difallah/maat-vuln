@@ -20,6 +20,7 @@ UNKNOWN_SNAPSHOT = "0" * 64
 # Click exits with 2 on usage errors.
 EXIT_USAGE = 2
 NARROW = 80
+MAX_AGE_VARIABLE = "MAAT_MAX_AGE"
 
 IN_KEV_DOCUMENT = json.dumps(
     {
@@ -241,6 +242,41 @@ def test_empty_cache_fetches(runner, feeds):
     assert latest_snapshot() is not None
 
 
+def test_max_age_variable(runner, snapshot, aged, feeds):
+    """MAAT_MAX_AGE sets --max-age."""
+    aged(30)
+    result = runner.invoke(
+        app, ["rank", "--format", "json", GHSA], env={MAX_AGE_VARIABLE: "12"}
+    )
+    assert result.exit_code == 0, result.output
+    report = Report.model_validate_json(result.stdout)
+    assert report.snapshot_id != snapshot.manifest.snapshot_id
+
+
+@pytest.mark.parametrize("args", [["--snapshot", "{id}"], ["--refresh"]])
+def test_max_age_variable_gives_way(runner, snapshot, feeds, args):
+    """MAAT_MAX_AGE is ignored with --snapshot or --refresh."""
+    args = [arg.format(id=snapshot.manifest.snapshot_id) for arg in args]
+    result = runner.invoke(
+        app,
+        ["rank", "--format", "json", *args, GHSA],
+        env={MAX_AGE_VARIABLE: "12"},
+    )
+    assert ranked(result) == [(GHSA, None)]
+
+
+@pytest.mark.parametrize(
+    ("args", "spinner"), [([], True), (["-q"], False), (["-v"], False)]
+)
+def test_fetch_spinner(runner, feeds, monkeypatch, args, spinner):
+    """A terminal shows a spinner while fetching, unless quiet or verbose."""
+    monkeypatch.setenv("FORCE_COLOR", "1")
+    result = runner.invoke(app, ["rank", "--format", "json", *args, GHSA])
+    assert result.exit_code == 0, result.output
+    # The verbose step has the same words, but no ellipsis.
+    assert ("Fetching the KEV and EPSS feeds…" in result.stderr) is spinner
+
+
 def test_fetch_failure(runner, respx_mock, epss):
     """A feed that cannot be fetched fails with a message."""
     respx_mock.get(KEV_URL).respond(404)
@@ -372,12 +408,69 @@ def test_verbose_snapshot_choice(runner, snapshot, request, args, step):
     assert in_order(result.stderr.splitlines(), [step.format(id=snapshot_id)])
 
 
+STALE_WARNING = (
+    "Warning: the latest snapshot is 30 hours old; use --refresh or"
+    " --max-age HOURS for fresher feeds."
+)
+
+
+def test_stale_snapshot(runner, aged):
+    """Reusing a snapshot over 24 hours old warns on stderr."""
+    aged(30)
+    result = runner.invoke(app, ["rank", "--format", "json", GHSA])
+    assert ranked(result) == [(GHSA, None)]
+    assert result.stderr == f"\n{STALE_WARNING}\n"
+
+
+@pytest.mark.parametrize(
+    ("args", "hours"),
+    [
+        ([], 24),
+        (["-q"], 30),
+        (["--snapshot", "{id}"], 30),
+        (["--max-age", "48"], 30),
+    ],
+)
+def test_no_stale_warning(runner, snapshot, aged, args, hours):
+    """No warning at 24 hours, in quiet mode, or for a chosen age."""
+    aged(hours)
+    snapshot_id = snapshot.manifest.snapshot_id
+    args = [arg.format(id=snapshot_id) for arg in args]
+    result = runner.invoke(app, ["rank", "--format", "json", *args, GHSA])
+    assert result.exit_code == 0, result.output
+    assert result.stderr == ""
+    if "-q" not in args:
+        report = Report.model_validate_json(result.stdout)
+        assert report.snapshot_id == snapshot_id
+
+
+@pytest.mark.parametrize("hours", [12, 30])
+def test_max_age_fetches(runner, snapshot, aged, feeds, hours):
+    """A snapshot as old as --max-age or older is replaced by a new one."""
+    aged(hours)
+    result = runner.invoke(
+        app, ["rank", "-v", "--format", "json", "--max-age", "12", GHSA]
+    )
+    assert result.exit_code == 0, result.output
+    report = Report.model_validate_json(result.stdout)
+    assert report.snapshot_id != snapshot.manifest.snapshot_id
+    assert report.snapshot_id == latest_snapshot().manifest.snapshot_id
+    assert (
+        f"The latest snapshot is {hours} hours old, not younger than"
+        " --max-age: fetching a new one"
+    ) in result.stderr.splitlines()
+    assert "Warning" not in result.stderr
+
+
 @pytest.mark.parametrize(
     "args",
     [
         ["--snapshot", UNKNOWN_SNAPSHOT, "--refresh"],
         ["--concurrency", "0"],
         ["--format", "xml"],
+        ["--max-age", "0"],
+        ["--max-age", "1", "--refresh"],
+        ["--max-age", "1", "--snapshot", UNKNOWN_SNAPSHOT],
     ],
 )
 def test_usage_errors(runner, args):
