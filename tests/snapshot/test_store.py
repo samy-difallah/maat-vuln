@@ -19,6 +19,7 @@ from maat_vuln.snapshot import (
     create_snapshot,
     default_root,
     latest_snapshot,
+    list_snapshots,
     load_snapshot,
     read_cvss,
 )
@@ -142,6 +143,17 @@ def test_latest_snapshot_skips_damaged(tmp_path):
     (damaged.path / MANIFEST_NAME).write_text("{")
     (tmp_path / ("0" * 64)).mkdir()
     assert latest_snapshot(tmp_path) == valid
+
+
+def test_list_snapshots_newest_first(tmp_path):
+    """Every valid snapshot is listed, newest first; damaged ones are not."""
+    oldest = create_snapshot(FEEDS, root=tmp_path)
+    newest = create_snapshot([raw_feed(content=b"[]")], root=tmp_path)
+    damaged = create_snapshot([raw_feed(content=b"0")], root=tmp_path)
+    (damaged.path / MANIFEST_NAME).write_text("{")
+    (tmp_path / ".tmp-leftover").mkdir()
+    assert list_snapshots(tmp_path) == [newest, oldest]
+    assert list_snapshots(tmp_path / "missing") == []
 
 
 def test_latest_snapshot_none(tmp_path):
