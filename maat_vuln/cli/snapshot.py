@@ -1,8 +1,9 @@
-"""``maat snapshot``: fetch a new snapshot of the feeds or show one."""
+"""``maat snapshot``: fetch a new snapshot of the feeds, list or show them."""
 
 from typing import Annotated
 
 import typer
+from pydantic import TypeAdapter
 from rich.console import Console
 from rich.text import Text
 
@@ -16,14 +17,22 @@ from maat_vuln.cli.common import (
 )
 from maat_vuln.engine import fetch_snapshot
 from maat_vuln.snapshot import (
+    Manifest,
     Snapshot,
     latest_snapshot,
+    list_snapshots,
     load_snapshot,
     read_cvss,
 )
 
 FEED_INDENT = "  "
 FETCH_STATUS = "Fetching the KEV and EPSS feeds…"
+EMPTY_CACHE = "no snapshot in cache, run maat snapshot fetch"
+
+
+def _versions(version: dict[str, str]) -> Text:
+    """Word a feed's version info on one line: ``key value, ...``."""
+    return Text(", ".join(f"{k} {v}" for k, v in version.items()))
 
 
 def snapshot_fetch(ctx: typer.Context) -> None:
@@ -36,10 +45,7 @@ def snapshot_fetch(ctx: typer.Context) -> None:
     print_fields(
         console,
         [
-            (
-                feed.name,
-                Text(", ".join(f"{k} {v}" for k, v in feed.version.items())),
-            )
+            (feed.name, _versions(feed.version))
             for feed in snapshot.manifest.feeds
         ],
     )
@@ -94,11 +100,49 @@ def snapshot_show(
             else load_snapshot(snapshot_id, ctx.obj)
         )
     if snapshot is None:
-        typer.echo(
-            "Error: no snapshot in cache, run maat snapshot fetch", err=True
-        )
+        typer.echo(f"Error: {EMPTY_CACHE}", err=True)
         raise typer.Exit(EXIT_ERROR)
     if output is OutputFormat.JSON:
         typer.echo(snapshot.manifest.model_dump_json(indent=2))
     else:
         _print_snapshot(snapshot)
+
+
+def _print_list(snapshots: list[Snapshot]) -> None:
+    """Print one block of fields per snapshot, headed by its ID."""
+    console = Console()
+    for snapshot in snapshots:
+        manifest = snapshot.manifest
+        console.print()
+        console.print(Text(manifest.snapshot_id, "bold"), soft_wrap=True)
+        print_fields(
+            console,
+            [
+                ("created", Text(timestamp(manifest.created_at))),
+                ("CVSS lookups", Text(str(len(read_cvss(snapshot))))),
+                *(
+                    (feed.name, _versions(feed.version))
+                    for feed in manifest.feeds
+                ),
+            ],
+            indent=FEED_INDENT,
+        )
+    console.print()
+
+
+def snapshot_list(
+    ctx: typer.Context,
+    output: Annotated[
+        OutputFormat, typer.Option("--format", help="Output format.")
+    ] = OutputFormat.TABLE,
+) -> None:
+    """List the snapshots of the cache, newest first."""
+    snapshots = list_snapshots(ctx.obj)
+    if output is OutputFormat.JSON:
+        manifests = [snapshot.manifest for snapshot in snapshots]
+        typer.echo(TypeAdapter(list[Manifest]).dump_json(manifests, indent=2))
+    elif snapshots:
+        _print_list(snapshots)
+    else:
+        # Not an error: an empty list is a valid answer.
+        typer.echo(EMPTY_CACHE.capitalize(), err=True)

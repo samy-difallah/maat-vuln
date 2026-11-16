@@ -13,17 +13,22 @@ import typer
 
 from maat_vuln.cli.explain import explain
 from maat_vuln.cli.rank import rank
-from maat_vuln.cli.snapshot import snapshot_fetch, snapshot_show
+from maat_vuln.cli.snapshot import (
+    snapshot_fetch,
+    snapshot_list,
+    snapshot_show,
+)
 from maat_vuln.snapshot import SNAPSHOTS_DIR, default_root
 
 app = typer.Typer(no_args_is_help=True, add_completion=False)
 snapshot_app = typer.Typer(no_args_is_help=True)
 app.add_typer(
-    snapshot_app, name="snapshot", help="Fetch or inspect feed snapshots."
+    snapshot_app, name="snapshot", help="Fetch, list or show feed snapshots."
 )
 app.command()(rank)
 app.command()(explain)
 snapshot_app.command("fetch")(snapshot_fetch)
+snapshot_app.command("list")(snapshot_list)
 snapshot_app.command("show")(snapshot_show)
 
 
