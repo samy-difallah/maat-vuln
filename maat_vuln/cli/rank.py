@@ -285,7 +285,8 @@ def rank(
         ),
     ] = None,
     output: Annotated[
-        OutputFormat, typer.Option("--format", help="Output format.")
+        OutputFormat,
+        typer.Option("--format", envvar="MAAT_FORMAT", help="Output format."),
     ] = OutputFormat.TABLE,
     snapshot_id: Annotated[
         str | None,
@@ -307,7 +308,11 @@ def rank(
     ] = None,
     concurrency: Annotated[
         int,
-        typer.Option(min=1, help="Maximum simultaneous CVSS lookups."),
+        typer.Option(
+            min=1,
+            envvar="MAAT_CONCURRENCY",
+            help="Maximum simultaneous CVSS lookups.",
+        ),
     ] = DEFAULT_CONCURRENCY,
     min_priority: Annotated[
         MinPriority | None,

@@ -167,7 +167,8 @@ def explain(
         typer.Option("--component", help="Package URL of the component."),
     ] = None,
     output: Annotated[
-        OutputFormat, typer.Option("--format", help="Output format.")
+        OutputFormat,
+        typer.Option("--format", envvar="MAAT_FORMAT", help="Output format."),
     ] = OutputFormat.TABLE,
     snapshot_id: Annotated[
         str | None,

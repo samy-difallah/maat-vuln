@@ -36,8 +36,10 @@ PRIORITY_STYLES = {
 }
 UNSCORED = "unscored"
 FETCH_STATUS = "Fetching the KEV and EPSS feeds…"
-# Age past which reusing the latest snapshot warns, unless --max-age.
+# Age past which reusing the latest snapshot warns, unless --max-age;
+# stale_after in maat.toml replaces it, through ctx.meta under this key.
 STALE_AFTER = timedelta(hours=24)
+STALE_AFTER_KEY = "maat_vuln.stale_after"
 HOUR = timedelta(hours=1)
 # Name of Click's ParameterSource for a value typed on the command line.
 COMMAND_LINE = "COMMANDLINE"
@@ -51,7 +53,7 @@ class OutputFormat(StrEnum):
     JSON = "json"
 
 
-def _message(error: Exception) -> str:
+def message(error: Exception) -> str:
     """Word an error in one line, validation errors as ``field: reason``."""
     if isinstance(error, json.JSONDecodeError):
         return f"invalid JSON input: {error}"
@@ -88,7 +90,7 @@ def fail_cleanly(quiet: bool = False) -> Iterator[None]:
         json.JSONDecodeError,
     ) as error:
         if not quiet:
-            typer.echo(f"Error: {_message(error)}", err=True)
+            typer.echo(f"Error: {message(error)}", err=True)
         raise typer.Exit(EXIT_ERROR) from error
 
 
@@ -117,7 +119,7 @@ def resolve_snapshot(
     """Load the requested snapshot, else the latest, else fetch one.
 
     Reusing the latest snapshot warns on stderr when it is older than
-    ``STALE_AFTER``, unless ``max_age`` is given.
+    ``stale_after`` from the config file, unless ``max_age`` is given.
 
     Args:
         snapshot_id: Snapshot to load, given by ``--snapshot``.
@@ -172,7 +174,8 @@ def resolve_snapshot(
             snapshot.manifest.snapshot_id,
             timestamp(snapshot.manifest.created_at),
         )
-        if max_age is None and age > STALE_AFTER and not quiet:
+        stale = age > ctx.meta[STALE_AFTER_KEY]
+        if max_age is None and stale and not quiet:
             typer.echo(
                 # A blank line first, as the report starts with one.
                 f"\nWarning: the latest snapshot is {age // HOUR} hours old;"

@@ -12,6 +12,7 @@ from maat_vuln.snapshot import SNAPSHOTS_DIR, latest_snapshot
 GHSA = "GHSA-JFH8-C2JP-5V3Q"
 # Click exits with 2 on usage errors.
 EXIT_USAGE = 2
+FORMAT_VARIABLE = "MAAT_FORMAT"
 
 
 @pytest.mark.parametrize("flag", ["--version", "-V"])
@@ -64,3 +65,26 @@ def test_cache_dir_file(runner, tmp_path):
     result = runner.invoke(app, ["--cache-dir", str(path), "snapshot", "show"])
     assert result.exit_code == EXIT_USAGE
     assert "is a file" in Text.from_ansi(result.stderr).plain
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        ["rank", GHSA],
+        ["explain", GHSA],
+        ["snapshot", "show"],
+        ["snapshot", "list"],
+    ],
+)
+def test_format_variable(runner, feeds, command):
+    """MAAT_FORMAT sets every command's --format, which beats it."""
+    fetched = runner.invoke(app, ["snapshot", "fetch"])
+    assert fetched.exit_code == 0, fetched.output
+    env = {FORMAT_VARIABLE: "json"}
+    result = runner.invoke(app, command, env=env)
+    assert result.exit_code == 0, result.output
+    json.loads(result.stdout)
+    result = runner.invoke(app, [*command, "--format", "table"], env=env)
+    assert result.exit_code == 0, result.output
+    with pytest.raises(json.JSONDecodeError):
+        json.loads(result.stdout)
