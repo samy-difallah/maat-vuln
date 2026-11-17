@@ -188,11 +188,11 @@ Short term (committed):
 - **v0.1** Reproducible core: the core features of §5.
 - **v0.2** SCA inputs: adapter architecture (entry points) with auto-detection; CycloneDX (incl. VDR, which covers Dependency-Track exports), Trivy, Grype, OSV-Scanner; multi-source merge with provenance. Scanner severities ignored. See §7.
 - **v0.3** Command line: version, quiet and verbose modes, cache directory, config file and environment variables, snapshot freshness (`--max-age`, stale warning), `snapshot list` / `prune` / `rm`, `formats`, `rank --min-priority` / `--top`. See §8.
-- **v0.4** Outputs and CI: SARIF, Markdown, enriched CycloneDX; `--fail-on CRITICAL|HIGH…`; GitHub Action.
+- **v0.4** VEX: CycloneDX VEX, OpenVEX, CSAF VEX, through `suppressed_by`.
 
 Medium term (planned, adjustable):
 
-- **v0.5** VEX: CycloneDX VEX, OpenVEX, CSAF VEX, through `suppressed_by`.
+- **v0.5** Outputs and CI: SARIF, Markdown, enriched CycloneDX; `--fail-on CRITICAL|HIGH…`; GitHub Action.
 - **v0.6** Policy as code: YAML policies, `policy validate` / `policy test`, SSVC example policy.
 
 Horizon (direction only, unversioned): offline bundles, `replay` / `diff`; European sources (EUVD, GCVE); context file (exposure, criticality); CRA notification signal; Dependency-Track (FPF) and Dependency-Check adapters; finer ranking formulas and graphical outputs once the tool is mature.
