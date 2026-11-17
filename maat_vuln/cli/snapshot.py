@@ -90,7 +90,8 @@ def snapshot_show(
         typer.Argument(metavar="[ID]", help="Snapshot ID, latest if none."),
     ] = None,
     output: Annotated[
-        OutputFormat, typer.Option("--format", help="Output format.")
+        OutputFormat,
+        typer.Option("--format", envvar="MAAT_FORMAT", help="Output format."),
     ] = OutputFormat.TABLE,
 ) -> None:
     """Show a snapshot's manifest: its feeds, versions and hashes."""
@@ -134,7 +135,8 @@ def _print_list(snapshots: list[Snapshot]) -> None:
 def snapshot_list(
     ctx: typer.Context,
     output: Annotated[
-        OutputFormat, typer.Option("--format", help="Output format.")
+        OutputFormat,
+        typer.Option("--format", envvar="MAAT_FORMAT", help="Output format."),
     ] = OutputFormat.TABLE,
 ) -> None:
     """List the snapshots of the cache, newest first."""

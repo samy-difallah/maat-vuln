@@ -8,6 +8,7 @@ import pytest
 from rich.text import Text
 
 from maat_vuln.cli import app
+from maat_vuln.engine import prioritize
 from maat_vuln.feeds import CVSS_LOOKUP_URL, EPSS_URL, KEV_URL
 from maat_vuln.models import Report
 from maat_vuln.snapshot import default_root, latest_snapshot
@@ -22,6 +23,7 @@ EXIT_USAGE = 2
 NARROW = 80
 MAX_AGE_VARIABLE = "MAAT_MAX_AGE"
 MIN_PRIORITY_VARIABLE = "MAAT_MIN_PRIORITY"
+CONCURRENCY_VARIABLE = "MAAT_CONCURRENCY"
 
 IN_KEV_DOCUMENT = json.dumps(
     {
@@ -255,6 +257,28 @@ def test_max_age_variable(runner, snapshot, aged, feeds):
     assert result.exit_code == 0, result.output
     report = Report.model_validate_json(result.stdout)
     assert report.snapshot_id != snapshot.manifest.snapshot_id
+
+
+@pytest.mark.parametrize(
+    ("args", "expected"), [([], 3), (["--concurrency", "5"], 5)]
+)
+def test_concurrency_variable(runner, snapshot, monkeypatch, args, expected):
+    """MAAT_CONCURRENCY sets --concurrency, which beats it."""
+    seen = []
+
+    def spy(findings, snapshot, concurrency):
+        """Record the concurrency the CLI passes."""
+        seen.append(concurrency)
+        return prioritize(findings, snapshot, concurrency)
+
+    monkeypatch.setattr("maat_vuln.cli.rank.prioritize", spy)
+    result = runner.invoke(
+        app,
+        ["rank", "--format", "json", *args, GHSA],
+        env={CONCURRENCY_VARIABLE: "3"},
+    )
+    assert ranked(result) == [(GHSA, None)]
+    assert seen == [expected]
 
 
 @pytest.mark.parametrize("args", [["--snapshot", "{id}"], ["--refresh"]])
