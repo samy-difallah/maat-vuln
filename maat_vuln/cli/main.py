@@ -11,6 +11,7 @@ from typing import Annotated
 
 import typer
 
+from maat_vuln.cli.config import load_config
 from maat_vuln.cli.explain import explain
 from maat_vuln.cli.formats import formats
 from maat_vuln.cli.rank import rank
@@ -74,6 +75,19 @@ def main(
             envvar="MAAT_CACHE_DIR",
             file_okay=False,
             help="Cache directory, the user cache if none.",
+        ),
+    ] = None,
+    _config: Annotated[
+        Path | None,
+        typer.Option(
+            "--config",
+            metavar="FILE",
+            exists=True,
+            dir_okay=False,
+            # Eager, so that its defaults apply to the options above.
+            is_eager=True,
+            callback=load_config,
+            help="Config file, ./maat.toml if none.",
         ),
     ] = None,
 ) -> None:
