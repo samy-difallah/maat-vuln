@@ -75,10 +75,10 @@ Enforced by ruff `ANN` rules — never disabled to make code pass.
 - `develop` is the default branch; `main` holds the latest stable release only. Both are protected by repository rulesets: PR required, no direct or force push, no deletion, `lint` and `test` checks required.
 - All other branches are ephemeral: force pushes are blocked everywhere (no `push --force` after a rebase or an amend), and head branches are deleted automatically once their PR is merged.
 - Merge methods (rebase merging is disabled):
-  - ephemeral branch → `develop`: **squash**. The PR title becomes the commit subject and the PR description its body, so both are what git-cliff and the history keep.
+  - ephemeral branch → `develop`: **squash**. The PR title becomes the commit subject, which git-cliff turns into the changelog line; GitHub fills the body with the list of the branch's commits.
   - `release/X.Y.Z` or `hotfix/<name>` → `main`: **merge commit** (the only method the `main` ruleset allows).
   - `main` → `develop` (merge back): **merge commit**. The `develop` ruleset allows both squash and merge, so choosing the right one here is a convention.
-- Pull requests: the description follows `.github/PULL_REQUEST_TEMPLATE.md` (`## Changes`, one bullet per logical change as `**type(scope)**` — what and why; `## Tests`, files/cases, `pytest` result, coverage).
+- Pull requests: the description follows `.github/PULL_REQUEST_TEMPLATE.md` exactly, no emojis. `## Changes`: one bullet per commit, in commit order, as `**type(scope)**` — what and why (release and hotfix PRs: every commit they bring into `main`, each ending with its PR reference, e.g. `— what and why (#51).`). `## Tests`: `**Files**:` with one sub-bullet per modified test file (`- **Files**: none.` when none), then `**pytest**:` (the result) and `**Coverage**:` (e.g. `97%`), each on its own line. Every list item ends with a period, except `**Files**:` when it introduces its sub-list; headings never do.
 - `CONTRIBUTING.md` is the contributor-facing version of these rules: when a convention here changes, update it in the same commit.
 
 ## Pre-commit

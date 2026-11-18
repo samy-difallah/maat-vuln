@@ -6,6 +6,7 @@ are retried with exponential backoff and jitter.
 """
 
 import asyncio
+import logging
 import random
 from datetime import UTC, datetime
 from email.utils import parsedate_to_datetime
@@ -24,6 +25,8 @@ MAX_ATTEMPTS = 4
 BACKOFF_BASE = 0.5
 # Also caps Retry-After, so a server asking for an hour cannot stall a run.
 MAX_DELAY = 30.0
+
+logger = logging.getLogger(__name__)
 
 
 class FetchError(Exception):
@@ -133,6 +136,14 @@ class HttpClient:
             except httpx.TransportError as error:
                 failure = error
             else:
+                logger.debug(
+                    "%s %s: HTTP %d, %d bytes in %.1fs",
+                    method,
+                    url,
+                    response.status_code,
+                    len(response.content),
+                    response.elapsed.total_seconds(),
+                )
                 if not _is_retryable(response):
                     return response
                 failure = httpx.HTTPStatusError(
@@ -143,7 +154,17 @@ class HttpClient:
                 asked = _retry_after(response)
             if attempt + 1 < MAX_ATTEMPTS:
                 backoff = random.uniform(0, BACKOFF_BASE * 2**attempt)
-                await asyncio.sleep(min(MAX_DELAY, max(backoff, asked or 0)))
+                delay = min(MAX_DELAY, max(backoff, asked or 0))
+                logger.debug(
+                    "%s %s failed (%s), attempt %d of %d in %.1fs",
+                    method,
+                    url,
+                    failure,
+                    attempt + 2,
+                    MAX_ATTEMPTS,
+                    delay,
+                )
+                await asyncio.sleep(delay)
         raise FetchError(
             f"{url} still failing after {MAX_ATTEMPTS} attempts"
         ) from failure

@@ -2,13 +2,16 @@
 
 import io
 import json
+import logging
 
 import pytest
+from rich.text import Text
 
 from maat_vuln.cli import app
+from maat_vuln.engine import prioritize
 from maat_vuln.feeds import CVSS_LOOKUP_URL, EPSS_URL, KEV_URL
 from maat_vuln.models import Report
-from maat_vuln.snapshot import latest_snapshot
+from maat_vuln.snapshot import default_root, latest_snapshot
 
 IN_KEV = "CVE-2026-106931"
 XZ = "CVE-2024-3094"
@@ -18,6 +21,9 @@ UNKNOWN_SNAPSHOT = "0" * 64
 # Click exits with 2 on usage errors.
 EXIT_USAGE = 2
 NARROW = 80
+MAX_AGE_VARIABLE = "MAAT_MAX_AGE"
+MIN_PRIORITY_VARIABLE = "MAAT_MIN_PRIORITY"
+CONCURRENCY_VARIABLE = "MAAT_CONCURRENCY"
 
 IN_KEV_DOCUMENT = json.dumps(
     {
@@ -49,6 +55,8 @@ def test_table(runner, snapshot, respx_mock, cvss_answer):
     respx_mock.post(CVSS_LOOKUP_URL).respond(200, json=cvss_answer)
     result = runner.invoke(app, ["rank", GHSA, XZ])
     assert result.exit_code == 0, result.output
+    # Processing steps are only shown in verbose mode.
+    assert result.stderr == ""
     lines = result.stdout.splitlines()
     xz_row = next(line for line in lines if XZ in line)
     assert "HIGH (P2)" in xz_row
@@ -73,6 +81,7 @@ def test_table(runner, snapshot, respx_mock, cvss_answer):
         "CRITICAL 0 · HIGH 1 · MEDIUM 0 · LOW 0 · unscored 1"
     )
     assert lines[summary + 2] == f"snapshot {snapshot.manifest.snapshot_id}"
+    assert "decisions shown" not in result.stdout
     # Blank lines frame the output and set the summary apart.
     assert lines[0] == lines[summary - 1] == lines[summary + 1] == ""
     assert lines[-1] == ""
@@ -112,6 +121,8 @@ def test_json(runner, snapshot, respx_mock, cvss_answer):
     assert ranked(result) == [(XZ, "HIGH"), (GHSA, None)]
     report = Report.model_validate_json(result.stdout)
     assert report.snapshot_id == snapshot.manifest.snapshot_id
+    # Every decision is kept: there is no selection.
+    assert "selection" not in json.loads(result.stdout)
 
 
 def test_input_file_with_arguments(runner, snapshot, tmp_path):
@@ -237,6 +248,63 @@ def test_empty_cache_fetches(runner, feeds):
     assert latest_snapshot() is not None
 
 
+def test_max_age_variable(runner, snapshot, aged, feeds):
+    """MAAT_MAX_AGE sets --max-age."""
+    aged(30)
+    result = runner.invoke(
+        app, ["rank", "--format", "json", GHSA], env={MAX_AGE_VARIABLE: "12"}
+    )
+    assert result.exit_code == 0, result.output
+    report = Report.model_validate_json(result.stdout)
+    assert report.snapshot_id != snapshot.manifest.snapshot_id
+
+
+@pytest.mark.parametrize(
+    ("args", "expected"), [([], 3), (["--concurrency", "5"], 5)]
+)
+def test_concurrency_variable(runner, snapshot, monkeypatch, args, expected):
+    """MAAT_CONCURRENCY sets --concurrency, which beats it."""
+    seen = []
+
+    def spy(findings, snapshot, concurrency):
+        """Record the concurrency the CLI passes."""
+        seen.append(concurrency)
+        return prioritize(findings, snapshot, concurrency)
+
+    monkeypatch.setattr("maat_vuln.cli.rank.prioritize", spy)
+    result = runner.invoke(
+        app,
+        ["rank", "--format", "json", *args, GHSA],
+        env={CONCURRENCY_VARIABLE: "3"},
+    )
+    assert ranked(result) == [(GHSA, None)]
+    assert seen == [expected]
+
+
+@pytest.mark.parametrize("args", [["--snapshot", "{id}"], ["--refresh"]])
+def test_max_age_variable_gives_way(runner, snapshot, feeds, args):
+    """MAAT_MAX_AGE is ignored with --snapshot or --refresh."""
+    args = [arg.format(id=snapshot.manifest.snapshot_id) for arg in args]
+    result = runner.invoke(
+        app,
+        ["rank", "--format", "json", *args, GHSA],
+        env={MAX_AGE_VARIABLE: "12"},
+    )
+    assert ranked(result) == [(GHSA, None)]
+
+
+@pytest.mark.parametrize(
+    ("args", "spinner"), [([], True), (["-q"], False), (["-v"], False)]
+)
+def test_fetch_spinner(runner, feeds, monkeypatch, args, spinner):
+    """A terminal shows a spinner while fetching, unless quiet or verbose."""
+    monkeypatch.setenv("FORCE_COLOR", "1")
+    result = runner.invoke(app, ["rank", "--format", "json", *args, GHSA])
+    assert result.exit_code == 0, result.output
+    # The verbose step has the same words, but no ellipsis.
+    assert ("Fetching the KEV and EPSS feeds…" in result.stderr) is spinner
+
+
 def test_fetch_failure(runner, respx_mock, epss):
     """A feed that cannot be fetched fails with a message."""
     respx_mock.get(KEV_URL).respond(404)
@@ -246,12 +314,191 @@ def test_fetch_failure(runner, respx_mock, epss):
     assert result.stderr.startswith("Error: ")
 
 
+def in_order(lines, prefixes):
+    """Tell whether lines start with the prefixes in order, gaps allowed."""
+    remaining = iter(lines)
+    return all(
+        any(line.startswith(prefix) for line in remaining)
+        for prefix in prefixes
+    )
+
+
+@pytest.mark.parametrize("output", ["table", "json"])
+def test_quiet(runner, snapshot, respx_mock, cvss_answer, output):
+    """Quiet ranking prints nothing, in any format."""
+    respx_mock.post(CVSS_LOOKUP_URL).respond(200, json=cvss_answer)
+    result = runner.invoke(app, ["rank", "-q", "--format", output, XZ])
+    assert result.exit_code == 0, result.output
+    assert result.stdout == result.stderr == ""
+
+
+def test_quiet_error(runner, snapshot):
+    """Quiet ranking silences errors: only the exit code tells."""
+    result = runner.invoke(
+        app, ["rank", "-q", "--snapshot", UNKNOWN_SNAPSHOT, GHSA]
+    )
+    assert result.exit_code == 1
+    assert result.stdout == result.stderr == ""
+
+
+def test_quiet_usage_error(runner):
+    """Quiet ranking still reports errors in the command line."""
+    result = runner.invoke(
+        app, ["rank", "-q", "--snapshot", UNKNOWN_SNAPSHOT, "--refresh", GHSA]
+    )
+    assert result.exit_code == EXIT_USAGE
+    # On GitHub Actions, Typer colours option names in its messages.
+    assert (
+        "cannot be combined with --snapshot"
+        in Text.from_ansi(result.stderr).plain
+    )
+
+
+def test_verbose(runner, feeds, respx_mock, cvss_answer):
+    """Verbose ranking prints every step on stderr, the result on stdout."""
+    respx_mock.post(CVSS_LOOKUP_URL).respond(200, json=cvss_answer)
+    result = runner.invoke(
+        app, ["rank", "-v", "--input", "-", XZ, GHSA], input=IN_KEV_DOCUMENT
+    )
+    assert result.exit_code == 0, result.output
+    assert IN_KEV in result.stdout
+    assert "Decisions:" not in result.stdout
+    logs = result.stderr.splitlines()
+    # A blank line first, as the report starts with one.
+    assert logs[0] == ""
+    assert in_order(
+        logs,
+        [
+            "IDs from the command line: 2",
+            "Detected the maat format",
+            "Findings from <stdin>: 1",
+            f"Looking for the latest snapshot in {default_root()}",
+            "No snapshot in the cache: fetching a new one",
+            "Fetching the KEV and EPSS feeds",
+            "Fetched the kev feed: ",
+            "Fetched the epss feed: ",
+            "Created snapshot ",
+            "Findings: read 3, kept 3 ",
+            "Vulnerabilities: 3, CVEs 2",
+            "Reading the kev feed: ",
+            "KEV: listed 1, not listed 1",
+            "Reading the epss feed: ",
+            "EPSS: scored 1, not scored 1",
+            "CVSS: from the input 1, cached in the snapshot 0, to look up 1",
+            "Looking up CVSS in Vulnerability-Lookup: CVEs 1, requests 1",
+            f"POST {CVSS_LOOKUP_URL}: HTTP 200, ",
+            "CVSS lookup: found 1, no CVSS 0, failed 0;",
+            "Decisions: 3, CRITICAL 1, HIGH 1, MEDIUM 0, LOW 0, unscored 1",
+        ],
+    ), logs
+    for url in (KEV_URL, EPSS_URL):
+        assert any(line.startswith(f"GET {url}: HTTP 200") for line in logs)
+
+
+def test_verbose_colour(runner, snapshot, monkeypatch):
+    """A terminal shows the steps in grey; the handler goes with the run."""
+    monkeypatch.setenv("FORCE_COLOR", "1")
+    result = runner.invoke(app, ["rank", "-v", GHSA])
+    assert result.exit_code == 0, result.output
+    step = next(line for line in result.stderr.splitlines() if line)
+    assert step.startswith("\x1b[")
+    assert "IDs from the command line: 1" in step
+    assert not logging.getLogger("maat_vuln").handlers
+
+
+def test_quiet_and_verbose(runner):
+    """Quiet and verbose modes cannot be combined."""
+    result = runner.invoke(app, ["rank", "-q", "-v", GHSA])
+    assert result.exit_code == EXIT_USAGE
+    # On GitHub Actions, Typer colours option names in its messages.
+    assert (
+        "cannot be combined with --verbose"
+        in Text.from_ansi(result.stderr).plain
+    )
+
+
+@pytest.mark.parametrize(
+    ("args", "step"),
+    [
+        ([], "Using the latest snapshot {id}, created "),
+        (["--snapshot", "{id}"], "Loading snapshot {id}, given by --snapshot"),
+        (["--refresh"], "Fetching a new snapshot, as --refresh asks"),
+    ],
+)
+def test_verbose_snapshot_choice(runner, snapshot, request, args, step):
+    """Verbose ranking tells which snapshot it uses, and why."""
+    if "--refresh" in args:
+        request.getfixturevalue("feeds")
+    snapshot_id = snapshot.manifest.snapshot_id
+    args = [arg.format(id=snapshot_id) for arg in args]
+    result = runner.invoke(app, ["rank", "-v", *args, GHSA])
+    assert result.exit_code == 0, result.output
+    assert in_order(result.stderr.splitlines(), [step.format(id=snapshot_id)])
+
+
+STALE_WARNING = (
+    "Warning: the latest snapshot is 30 hours old; use --refresh or"
+    " --max-age HOURS for fresher feeds."
+)
+
+
+def test_stale_snapshot(runner, aged):
+    """Reusing a snapshot over 24 hours old warns on stderr."""
+    aged(30)
+    result = runner.invoke(app, ["rank", "--format", "json", GHSA])
+    assert ranked(result) == [(GHSA, None)]
+    assert result.stderr == f"\n{STALE_WARNING}\n"
+
+
+@pytest.mark.parametrize(
+    ("args", "hours"),
+    [
+        ([], 24),
+        (["-q"], 30),
+        (["--snapshot", "{id}"], 30),
+        (["--max-age", "48"], 30),
+    ],
+)
+def test_no_stale_warning(runner, snapshot, aged, args, hours):
+    """No warning at 24 hours, in quiet mode, or for a chosen age."""
+    aged(hours)
+    snapshot_id = snapshot.manifest.snapshot_id
+    args = [arg.format(id=snapshot_id) for arg in args]
+    result = runner.invoke(app, ["rank", "--format", "json", *args, GHSA])
+    assert result.exit_code == 0, result.output
+    assert result.stderr == ""
+    if "-q" not in args:
+        report = Report.model_validate_json(result.stdout)
+        assert report.snapshot_id == snapshot_id
+
+
+@pytest.mark.parametrize("hours", [12, 30])
+def test_max_age_fetches(runner, snapshot, aged, feeds, hours):
+    """A snapshot as old as --max-age or older is replaced by a new one."""
+    aged(hours)
+    result = runner.invoke(
+        app, ["rank", "-v", "--format", "json", "--max-age", "12", GHSA]
+    )
+    assert result.exit_code == 0, result.output
+    report = Report.model_validate_json(result.stdout)
+    assert report.snapshot_id != snapshot.manifest.snapshot_id
+    assert report.snapshot_id == latest_snapshot().manifest.snapshot_id
+    assert (
+        f"The latest snapshot is {hours} hours old, not younger than"
+        " --max-age: fetching a new one"
+    ) in result.stderr.splitlines()
+    assert "Warning" not in result.stderr
+
+
 @pytest.mark.parametrize(
     "args",
     [
         ["--snapshot", UNKNOWN_SNAPSHOT, "--refresh"],
         ["--concurrency", "0"],
         ["--format", "xml"],
+        ["--max-age", "0"],
+        ["--max-age", "1", "--refresh"],
+        ["--max-age", "1", "--snapshot", UNKNOWN_SNAPSHOT],
     ],
 )
 def test_usage_errors(runner, args):
@@ -304,3 +551,88 @@ def test_invalid_input(runner, snapshot, args, stdin, message):
     result = runner.invoke(app, ["rank", *args], input=stdin)
     assert result.exit_code == 1
     assert result.stderr == message + "\n"
+
+
+def rank_three(runner, *args, env=None):
+    """Rank a CRITICAL, a HIGH and an unscored finding, as JSON."""
+    return runner.invoke(
+        app,
+        ["rank", "--format", "json", *args, "--input", "-", XZ, GHSA],
+        input=IN_KEV_DOCUMENT,
+        env=env,
+    )
+
+
+@pytest.mark.parametrize(
+    ("args", "env", "kept", "selection"),
+    [
+        (
+            ["--min-priority", "HIGH"],
+            None,
+            [(IN_KEV, "CRITICAL"), (XZ, "HIGH")],
+            {"min_priority": "HIGH", "total": 3},
+        ),
+        (
+            [],
+            {MIN_PRIORITY_VARIABLE: "CRITICAL"},
+            [(IN_KEV, "CRITICAL")],
+            {"min_priority": "CRITICAL", "total": 3},
+        ),
+        (
+            ["--top", "1"],
+            None,
+            [(IN_KEV, "CRITICAL")],
+            {"top": 1, "total": 3},
+        ),
+        # Unscored decisions are left out before --top counts.
+        (
+            ["--min-priority", "LOW", "--top", "5"],
+            None,
+            [(IN_KEV, "CRITICAL"), (XZ, "HIGH")],
+            {"min_priority": "LOW", "top": 5, "total": 3},
+        ),
+    ],
+)
+def test_selection(
+    runner, snapshot, respx_mock, cvss_answer, args, env, kept, selection
+):
+    """The report keeps the selected decisions and records the selection."""
+    respx_mock.post(CVSS_LOOKUP_URL).respond(200, json=cvss_answer)
+    result = rank_three(runner, *args, env=env)
+    assert ranked(result) == kept
+    report = json.loads(result.stdout)
+    assert report["selection"] == selection
+    # The summary still counts every decision.
+    assert report["summary"] == {
+        "CRITICAL": 1,
+        "HIGH": 1,
+        "MEDIUM": 0,
+        "LOW": 0,
+        "unscored": 1,
+    }
+
+
+def test_selection_table(runner, snapshot, respx_mock, cvss_answer):
+    """The table says how many decisions it shows out of how many."""
+    respx_mock.post(CVSS_LOOKUP_URL).respond(200, json=cvss_answer)
+    result = runner.invoke(
+        app,
+        ["rank", "--top", "1", "--input", "-", XZ, GHSA],
+        input=IN_KEV_DOCUMENT,
+    )
+    assert result.exit_code == 0, result.output
+    assert IN_KEV in result.stdout
+    assert XZ not in result.stdout
+    lines = result.stdout.splitlines()
+    shown = lines.index("1 of 3 decisions shown")
+    assert lines[shown + 2] == (
+        "CRITICAL 1 · HIGH 1 · MEDIUM 0 · LOW 0 · unscored 1"
+    )
+
+
+def test_selection_verbose(runner, snapshot, respx_mock, cvss_answer):
+    """Verbose mode prints how many decisions the selection kept."""
+    respx_mock.post(CVSS_LOOKUP_URL).respond(200, json=cvss_answer)
+    result = rank_three(runner, "-v", "--top", "2")
+    assert result.exit_code == 0, result.output
+    assert "Selected decisions: 2 of 3" in result.stderr.splitlines()

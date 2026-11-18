@@ -19,8 +19,11 @@ from maat_vuln.snapshot import (
     create_snapshot,
     default_root,
     latest_snapshot,
+    list_snapshots,
     load_snapshot,
+    prune_snapshots,
     read_cvss,
+    remove_snapshots,
 )
 
 RETRIEVED_AT = datetime(2026, 10, 20, 12, tzinfo=UTC)
@@ -144,10 +147,87 @@ def test_latest_snapshot_skips_damaged(tmp_path):
     assert latest_snapshot(tmp_path) == valid
 
 
+def test_list_snapshots_newest_first(tmp_path):
+    """Every valid snapshot is listed, newest first; damaged ones are not."""
+    oldest = create_snapshot(FEEDS, root=tmp_path)
+    newest = create_snapshot([raw_feed(content=b"[]")], root=tmp_path)
+    damaged = create_snapshot([raw_feed(content=b"0")], root=tmp_path)
+    (damaged.path / MANIFEST_NAME).write_text("{")
+    (tmp_path / ".tmp-leftover").mkdir()
+    assert list_snapshots(tmp_path) == [newest, oldest]
+    assert list_snapshots(tmp_path / "missing") == []
+
+
 def test_latest_snapshot_none(tmp_path):
     """No snapshot yet, whether the root exists or not."""
     assert latest_snapshot(tmp_path / "missing") is None
     assert latest_snapshot(tmp_path) is None
+
+
+def test_remove_snapshots(tmp_path):
+    """Removing deletes each given snapshot, damaged ones included."""
+    kept = create_snapshot(FEEDS, root=tmp_path)
+    removed = create_snapshot([raw_feed(content=b"[]")], root=tmp_path)
+    damaged = create_snapshot([raw_feed(content=b"0")], root=tmp_path)
+    (damaged.path / MANIFEST_NAME).write_text("{")
+    ids = [removed.manifest.snapshot_id, damaged.manifest.snapshot_id]
+    assert remove_snapshots([*ids, ids[0]], tmp_path) == ids
+    assert list_snapshots(tmp_path) == [kept]
+    assert not damaged.path.exists()
+
+
+@pytest.mark.parametrize("unknown", ["a" * 64, "../" + "a" * 61, ".tmp-x"])
+def test_remove_unknown_snapshot_deletes_nothing(tmp_path, unknown):
+    """One unknown or malformed ID, and nothing at all is deleted."""
+    snapshot = create_snapshot(FEEDS, root=tmp_path)
+    (tmp_path / ".tmp-x").mkdir()
+    with pytest.raises(SnapshotError, match="unknown snapshot"):
+        remove_snapshots([snapshot.manifest.snapshot_id, unknown], tmp_path)
+    assert list_snapshots(tmp_path) == [snapshot]
+
+
+def test_remove_snapshot_failure(tmp_path, monkeypatch):
+    """A file system error is reported as a snapshot error."""
+    snapshot = create_snapshot(FEEDS, root=tmp_path)
+
+    def refuse(path):
+        """Fail as a read-only cache would."""
+        raise PermissionError(13, "Permission denied", str(path))
+
+    monkeypatch.setattr("shutil.rmtree", refuse)
+    snapshot_id = snapshot.manifest.snapshot_id
+    with pytest.raises(
+        SnapshotError,
+        match=f"cannot delete snapshot {snapshot_id}: Permission denied",
+    ):
+        remove_snapshots([snapshot_id], tmp_path)
+
+
+@pytest.mark.parametrize("keep", [0, 1, 2, 3])
+def test_prune_snapshots_keeps_newest(tmp_path, keep):
+    """Pruning deletes every snapshot but the newest ones, newest first."""
+    snapshots = [
+        create_snapshot([raw_feed(content=content)], root=tmp_path)
+        for content in (b"0", b"1", b"2")
+    ][::-1]
+    ids = [snapshot.manifest.snapshot_id for snapshot in snapshots]
+    assert prune_snapshots(keep, tmp_path) == ids[keep:]
+    assert list_snapshots(tmp_path) == snapshots[:keep]
+
+
+def test_prune_snapshots_spares_damaged(tmp_path):
+    """A damaged snapshot is neither counted nor deleted by pruning."""
+    damaged = create_snapshot([raw_feed(content=b"0")], root=tmp_path)
+    (damaged.path / MANIFEST_NAME).write_text("{")
+    assert prune_snapshots(0, tmp_path / "missing") == []
+    assert prune_snapshots(0, tmp_path) == []
+    assert damaged.path.exists()
+
+
+def test_prune_snapshots_rejects_negative_keep(tmp_path):
+    """A negative count would delete the newest snapshots: refused."""
+    with pytest.raises(ValueError, match="keep"):
+        prune_snapshots(-1, tmp_path)
 
 
 def test_default_root_in_user_cache():

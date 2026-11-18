@@ -8,6 +8,7 @@ beside it, in ``cvss.jsonl``, outside the hash.
 
 import hashlib
 import json
+import logging
 import re
 import shutil
 import tempfile
@@ -33,6 +34,8 @@ SNAPSHOTS_DIR = "snapshots"
 MANIFEST_NAME = "manifest.json"
 CVSS_CACHE_NAME = "cvss.jsonl"
 TMP_PREFIX = ".tmp-"
+
+logger = logging.getLogger(__name__)
 
 # No separator and no leading dot: a feed file stays inside its snapshot.
 FILENAME_PATTERN = r"^[A-Za-z0-9_-][A-Za-z0-9._-]*$"
@@ -160,6 +163,7 @@ def create_snapshot(
             tmp.rename(target)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
+    logger.info("Created snapshot %s in %s", manifest.snapshot_id, root)
     return Snapshot(path=target, manifest=manifest)
 
 
@@ -183,27 +187,86 @@ def load_snapshot(snapshot_id: str, root: Path | None = None) -> Snapshot:
     return Snapshot(path=path, manifest=manifest)
 
 
-def latest_snapshot(root: Path | None = None) -> Snapshot | None:
-    """Return the most recently created snapshot, if there is one.
+def list_snapshots(root: Path | None = None) -> list[Snapshot]:
+    """Return every snapshot of the cache, newest first.
 
     A damaged snapshot is skipped, so it never hides the valid ones;
     loading it by its ID still reports the damage.
     """
     root = default_root() if root is None else root
     if not root.is_dir():
-        return None
+        return []
     snapshots = []
     for path in root.iterdir():
         if not re.fullmatch(SHA256_PATTERN, path.name):
             continue
         try:
             snapshots.append(load_snapshot(path.name, root))
-        except SnapshotError:
+        except SnapshotError as error:
+            logger.info("Skipping snapshot %s: %s", path.name, error)
             continue
-    return max(
+    # The ID breaks ties, so the order never depends on the file system.
+    return sorted(
         snapshots,
-        key=lambda snapshot: snapshot.manifest.created_at,
-        default=None,
+        key=lambda snapshot: (
+            snapshot.manifest.created_at,
+            snapshot.manifest.snapshot_id,
+        ),
+        reverse=True,
+    )
+
+
+def latest_snapshot(root: Path | None = None) -> Snapshot | None:
+    """Return the most recently created snapshot, if there is one."""
+    return next(iter(list_snapshots(root)), None)
+
+
+def remove_snapshots(
+    snapshot_ids: list[str], root: Path | None = None
+) -> list[str]:
+    """Delete the given snapshots and return their IDs, each once.
+
+    Every ID is checked before anything is deleted, so an unknown one
+    leaves the cache untouched. A damaged snapshot is still known: this
+    is how it gets cleared.
+
+    Raises:
+        SnapshotError: If an ID is unknown or a snapshot cannot be
+            deleted.
+    """
+    root = default_root() if root is None else root
+    ids = list(dict.fromkeys(snapshot_ids))
+    for snapshot_id in ids:
+        if not re.fullmatch(SHA256_PATTERN, snapshot_id) or not (
+            (root / snapshot_id).is_dir()
+        ):
+            raise SnapshotError(f"unknown snapshot {snapshot_id}")
+    for snapshot_id in ids:
+        try:
+            shutil.rmtree(root / snapshot_id)
+        except OSError as error:
+            # Left half deleted, it is damaged but still removable.
+            raise SnapshotError(
+                f"cannot delete snapshot {snapshot_id}: {error.strerror}"
+            ) from error
+        logger.info("Deleted snapshot %s", snapshot_id)
+    return ids
+
+
+def prune_snapshots(keep: int, root: Path | None = None) -> list[str]:
+    """Delete every snapshot but the ``keep`` newest; return their IDs.
+
+    Damaged snapshots are neither counted nor deleted, as in
+    :func:`list_snapshots`.
+
+    Raises:
+        ValueError: If ``keep`` is negative.
+    """
+    if keep < 0:
+        raise ValueError(f"keep must be 0 or more, not {keep}")
+    old = list_snapshots(root)[keep:]
+    return remove_snapshots(
+        [snapshot.manifest.snapshot_id for snapshot in old], root
     )
 
 

@@ -1,10 +1,12 @@
 """Pieces shared by the commands: options, error handling and display."""
 
 import json
+import logging
 from collections.abc import Iterator
-from contextlib import contextmanager
-from datetime import UTC, datetime
+from contextlib import contextmanager, nullcontext
+from datetime import UTC, datetime, timedelta
 from enum import StrEnum
+from pathlib import Path
 
 import typer
 from pydantic import ValidationError
@@ -33,6 +35,15 @@ PRIORITY_STYLES = {
     "LOW": "cyan",
 }
 UNSCORED = "unscored"
+FETCH_STATUS = "Fetching the KEV and EPSS feeds…"
+# Age past which reusing the latest snapshot warns, unless --max-age;
+# stale_after in maat.toml replaces it, through ctx.meta under this key.
+STALE_AFTER = timedelta(hours=24)
+STALE_AFTER_KEY = "maat_vuln.stale_after"
+HOUR = timedelta(hours=1)
+# Name of Click's ParameterSource for a value typed on the command line.
+COMMAND_LINE = "COMMANDLINE"
+logger = logging.getLogger(__name__)
 
 
 class OutputFormat(StrEnum):
@@ -42,7 +53,7 @@ class OutputFormat(StrEnum):
     JSON = "json"
 
 
-def _message(error: Exception) -> str:
+def message(error: Exception) -> str:
     """Word an error in one line, validation errors as ``field: reason``."""
     if isinstance(error, json.JSONDecodeError):
         return f"invalid JSON input: {error}"
@@ -63,8 +74,12 @@ def _message(error: Exception) -> str:
 
 
 @contextmanager
-def fail_cleanly() -> Iterator[None]:
-    """Turn expected errors into a message on stderr and exit code 1."""
+def fail_cleanly(quiet: bool = False) -> Iterator[None]:
+    """Turn expected errors into a message on stderr and exit code 1.
+
+    Args:
+        quiet: Exit with code 1 without any message.
+    """
     try:
         yield
     except (
@@ -74,15 +89,50 @@ def fail_cleanly() -> Iterator[None]:
         FormatError,
         json.JSONDecodeError,
     ) as error:
-        typer.echo(f"Error: {_message(error)}", err=True)
+        if not quiet:
+            typer.echo(f"Error: {message(error)}", err=True)
         raise typer.Exit(EXIT_ERROR) from error
 
 
-def resolve_snapshot(snapshot_id: str | None, refresh: bool) -> Snapshot:
-    """Load the requested snapshot, else the latest, else fetch one.
+def fetch_with_status(root: Path, status: bool = True) -> Snapshot:
+    """Fetch a new snapshot, under a spinner on stderr if ``status``.
+
+    Rich shows the spinner on a terminal only, and erases it once done.
 
     Raises:
-        typer.BadParameter: both a snapshot ID and refresh are given.
+        FetchError: a feed could not be fetched.
+    """
+    with (
+        Console(stderr=True).status(FETCH_STATUS) if status else nullcontext()
+    ):
+        return fetch_snapshot(root)
+
+
+def resolve_snapshot(
+    ctx: typer.Context,
+    snapshot_id: str | None,
+    refresh: bool,
+    max_age: int | None = None,
+    quiet: bool = False,
+    verbose: bool = False,
+) -> Snapshot:
+    """Load the requested snapshot, else the latest, else fetch one.
+
+    Reusing the latest snapshot warns on stderr when it is older than
+    ``stale_after`` from the config file, unless ``max_age`` is given.
+
+    Args:
+        snapshot_id: Snapshot to load, given by ``--snapshot``.
+        refresh: Fetch a new snapshot, as ``--refresh`` asks.
+        ctx: Context of the command, holding the snapshot directory.
+        max_age: Reuse the latest snapshot only if younger than this
+            many hours, as ``--max-age`` or ``MAAT_MAX_AGE`` asks.
+        quiet: Leave out the stale snapshot warning and the spinner.
+        verbose: Leave out the spinner, as the steps show progress.
+
+    Raises:
+        typer.BadParameter: --snapshot, --refresh and a typed
+            --max-age are combined.
         SnapshotError: the snapshot is unknown or inconsistent.
         FetchError: a feed could not be fetched.
     """
@@ -90,11 +140,51 @@ def resolve_snapshot(snapshot_id: str | None, refresh: bool) -> Snapshot:
         raise typer.BadParameter(
             "cannot be combined with --snapshot", param_hint="'--refresh'"
         )
+    # A max_age not typed gives way to --snapshot and --refresh, as
+    # flags beat variables.
+    if (
+        max_age is not None
+        and (snapshot_id is not None or refresh)
+        and ctx.get_parameter_source("max_age").name == COMMAND_LINE
+    ):
+        raise typer.BadParameter(
+            "cannot be combined with --snapshot or --refresh",
+            param_hint="'--max-age'",
+        )
+    root = ctx.obj
+    status = not (quiet or verbose)
     if snapshot_id is not None:
-        return load_snapshot(snapshot_id)
-    if not refresh and (snapshot := latest_snapshot()) is not None:
+        logger.info("Loading snapshot %s, given by --snapshot", snapshot_id)
+        return load_snapshot(snapshot_id, root)
+    if refresh:
+        logger.info("Fetching a new snapshot, as --refresh asks")
+        return fetch_with_status(root, status)
+    logger.info("Looking for the latest snapshot in %s", root)
+    if (snapshot := latest_snapshot(root)) is not None:
+        age = datetime.now(UTC) - snapshot.manifest.created_at
+        if max_age is not None and age >= max_age * HOUR:
+            logger.info(
+                "The latest snapshot is %d hours old, not younger than"
+                " --max-age: fetching a new one",
+                age // HOUR,
+            )
+            return fetch_with_status(root, status)
+        logger.info(
+            "Using the latest snapshot %s, created %s",
+            snapshot.manifest.snapshot_id,
+            timestamp(snapshot.manifest.created_at),
+        )
+        stale = age > ctx.meta[STALE_AFTER_KEY]
+        if max_age is None and stale and not quiet:
+            typer.echo(
+                # A blank line first, as the report starts with one.
+                f"\nWarning: the latest snapshot is {age // HOUR} hours old;"
+                " use --refresh or --max-age HOURS for fresher feeds.",
+                err=True,
+            )
         return snapshot
-    return fetch_snapshot()
+    logger.info("No snapshot in the cache: fetching a new one")
+    return fetch_with_status(root, status)
 
 
 def priority_label(priority: Priority | None) -> str:

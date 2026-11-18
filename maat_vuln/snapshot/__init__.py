@@ -3,6 +3,7 @@
 from maat_vuln.snapshot.store import (
     CVSS_CACHE_NAME,
     MANIFEST_NAME,
+    SNAPSHOTS_DIR,
     CvssEntry,
     FeedRecord,
     Manifest,
@@ -15,13 +16,17 @@ from maat_vuln.snapshot.store import (
     create_snapshot,
     default_root,
     latest_snapshot,
+    list_snapshots,
     load_snapshot,
+    prune_snapshots,
     read_cvss,
+    remove_snapshots,
 )
 
 __all__ = [
     "CVSS_CACHE_NAME",
     "MANIFEST_NAME",
+    "SNAPSHOTS_DIR",
     "CvssEntry",
     "FeedRecord",
     "Manifest",
@@ -34,6 +39,9 @@ __all__ = [
     "create_snapshot",
     "default_root",
     "latest_snapshot",
+    "list_snapshots",
     "load_snapshot",
+    "prune_snapshots",
     "read_cvss",
+    "remove_snapshots",
 ]

@@ -1,10 +1,15 @@
 """``maat rank``: rank vulnerabilities by priority, as a table or JSON."""
 
 import json
+import logging
 import sys
+from collections.abc import Iterator
+from contextlib import contextmanager, nullcontext
+from enum import StrEnum
 from typing import Annotated
 
 import typer
+from pydantic import MISSING
 from rich import box
 from rich.console import Console
 from rich.table import Table
@@ -22,12 +27,14 @@ from maat_vuln.cli.common import (
 from maat_vuln.engine import prioritize
 from maat_vuln.feeds import DEFAULT_CONCURRENCY
 from maat_vuln.models import (
+    PRIORITIES,
     CvssSignal,
     Decision,
     EpssSignal,
     Finding,
     KevSignal,
     Report,
+    Selection,
 )
 
 ABSENT = "-"
@@ -47,6 +54,54 @@ COLUMNS = (
 NUMERIC_COLUMNS = frozenset({"EPSS", "Pctl", "CVSS"})
 COMPONENT_COLUMN = "Component"
 WRAPPING_COLUMNS = frozenset({COMPONENT_COLUMN, "Rule", "Flags"})
+
+# The library logs under this logger and never configures handlers.
+LIBRARY_LOGGER = "maat_vuln"
+LOG_STYLE = "grey70"
+
+logger = logging.getLogger(__name__)
+
+# Typer offers choices from an Enum only.
+MinPriority = StrEnum("MinPriority", {p: p for p in PRIORITIES})
+
+
+class _StepHandler(logging.Handler):
+    """Print each log record on stderr as one light grey line."""
+
+    def __init__(self, console: Console) -> None:
+        """Print to ``console``, which colours only on a terminal."""
+        super().__init__()
+        self._console = console
+
+    def emit(self, record: logging.LogRecord) -> None:
+        """Print the record's message, never wrapped, as plain text."""
+        # Unwrapped, so URLs and IDs copy in one piece.
+        self._console.print(
+            self.format(record),
+            style=LOG_STYLE,
+            markup=False,
+            highlight=False,
+            emoji=False,
+            soft_wrap=True,
+        )
+
+
+@contextmanager
+def _verbose_steps() -> Iterator[None]:
+    """Print every processing step of the library while in the block."""
+    console = Console(stderr=True)
+    # A blank line first, as the report starts with one.
+    console.print()
+    handler = _StepHandler(console)
+    library = logging.getLogger(LIBRARY_LOGGER)
+    level = library.level
+    library.addHandler(handler)
+    library.setLevel(logging.DEBUG)
+    try:
+        yield
+    finally:
+        library.removeHandler(handler)
+        library.setLevel(level)
 
 
 def _read_findings(
@@ -69,8 +124,12 @@ def _read_findings(
             "'-' (stdin) can be given only once", param_hint="--input"
         )
     findings = [Finding(id=vuln_id) for vuln_id in ids]
+    if ids:
+        logger.info("IDs from the command line: %d", len(ids))
     for document in documents:
-        findings += load_findings(json.loads(document.read()))
+        found = load_findings(json.loads(document.read()))
+        logger.info("Findings from %s: %d", document.name, len(found))
+        findings += found
     if not ids and not documents:
         if sys.stdin.isatty():
             raise typer.BadParameter(
@@ -81,7 +140,44 @@ def _read_findings(
             for line in sys.stdin.read().splitlines()
             if line.strip()
         ]
+        logger.info("IDs from stdin: %d", len(findings))
     return findings
+
+
+def _select(
+    report: Report, min_priority: str | None, top: int | None
+) -> Report:
+    """Keep the decisions of min_priority or above, then the first top.
+
+    The summary still counts every decision; the selection records the
+    criteria given and the number of decisions before selection.
+    """
+    if min_priority is None and top is None:
+        return report
+    decisions = report.decisions
+    criteria: dict[str, str | int] = {}
+    if min_priority is not None:
+        rank = PRIORITIES.index(min_priority)
+        decisions = [
+            d
+            for d in decisions
+            if d.priority is not None and PRIORITIES.index(d.priority) <= rank
+        ]
+        criteria["min_priority"] = min_priority
+    if top is not None:
+        decisions = decisions[:top]
+        criteria["top"] = top
+    logger.info(
+        "Selected decisions: %d of %d", len(decisions), len(report.decisions)
+    )
+    return report.model_copy(
+        update={
+            "decisions": decisions,
+            "selection": Selection.model_validate(
+                criteria | {"total": len(report.decisions)}
+            ),
+        }
+    )
 
 
 def _table(*columns: str) -> Table:
@@ -158,12 +254,22 @@ def _print_table(report: Report) -> None:
         for key, count in report.summary
     )
     snapshot = Text(f"snapshot {report.snapshot_id}")
+    selection = (
+        []
+        if report.selection is MISSING
+        else [
+            f"{len(report.decisions)} of {report.selection.total}"
+            " decisions shown",
+            "",
+        ]
+    )
     console = Console()
-    for block in ("", table, "", summary, "", snapshot, ""):
+    for block in ("", table, "", *selection, summary, "", snapshot, ""):
         console.print(block)
 
 
 def rank(
+    ctx: typer.Context,
     ids: Annotated[
         list[str] | None,
         typer.Argument(
@@ -179,7 +285,8 @@ def rank(
         ),
     ] = None,
     output: Annotated[
-        OutputFormat, typer.Option("--format", help="Output format.")
+        OutputFormat,
+        typer.Option("--format", envvar="MAAT_FORMAT", help="Output format."),
     ] = OutputFormat.TABLE,
     snapshot_id: Annotated[
         str | None,
@@ -189,10 +296,45 @@ def rank(
         bool,
         typer.Option("--refresh", help="Fetch a new snapshot first."),
     ] = False,
+    max_age: Annotated[
+        int | None,
+        typer.Option(
+            min=1,
+            metavar="HOURS",
+            envvar="MAAT_MAX_AGE",
+            help="Reuse the latest snapshot only if younger than HOURS,"
+            " else fetch a new one.",
+        ),
+    ] = None,
     concurrency: Annotated[
         int,
-        typer.Option(min=1, help="Maximum simultaneous CVSS lookups."),
+        typer.Option(
+            min=1,
+            envvar="MAAT_CONCURRENCY",
+            help="Maximum simultaneous CVSS lookups.",
+        ),
     ] = DEFAULT_CONCURRENCY,
+    min_priority: Annotated[
+        MinPriority | None,
+        typer.Option(
+            envvar="MAAT_MIN_PRIORITY",
+            help="Keep the decisions of this priority or above.",
+        ),
+    ] = None,
+    top: Annotated[
+        int | None,
+        typer.Option(min=1, metavar="N", help="Keep the first N decisions."),
+    ] = None,
+    quiet: Annotated[
+        bool,
+        typer.Option("--quiet", "-q", help="Print nothing, not even errors."),
+    ] = False,
+    verbose: Annotated[
+        bool,
+        typer.Option(
+            "--verbose", "-v", help="Print every processing step on stderr."
+        ),
+    ] = False,
 ) -> None:
     """Rank vulnerabilities by priority, CRITICAL first.
 
@@ -200,13 +342,32 @@ def rank(
     together; findings of the same vulnerability and component merge.
     With no IDs and no --input, IDs are read from stdin, one per line.
     The latest snapshot is used unless --snapshot or --refresh is given;
-    one is fetched when the cache has none.
+    one is fetched when the cache has none, or with --max-age when the
+    latest is too old. --min-priority and --top select the decisions
+    shown; the summary counts them all.
     """
-    with fail_cleanly():
-        findings = _read_findings(ids or [], documents or [])
-        report = prioritize(
-            findings, resolve_snapshot(snapshot_id, refresh), concurrency
+    if quiet and verbose:
+        raise typer.BadParameter(
+            "cannot be combined with --verbose", param_hint="'--quiet'"
         )
+    with (
+        _verbose_steps() if verbose else nullcontext(),
+        fail_cleanly(quiet),
+    ):
+        findings = _read_findings(ids or [], documents or [])
+        report = _select(
+            prioritize(
+                findings,
+                resolve_snapshot(
+                    ctx, snapshot_id, refresh, max_age, quiet, verbose
+                ),
+                concurrency,
+            ),
+            min_priority,
+            top,
+        )
+    if quiet:
+        return
     if output is OutputFormat.JSON:
         typer.echo(report.model_dump_json(indent=2))
     else:

@@ -4,6 +4,7 @@
 
 ## Tests
 
-- Files/cases:
-- `pytest`:
-- Coverage:
+- **Files**:
+  - `tests/path/test_module.py` — what the cases cover.
+- **pytest**: N passed.
+- **Coverage**: N%.

@@ -51,8 +51,8 @@ Group commits by unit of meaning, not by file: neither one giant commit nor one 
 ## Pull requests
 
 - **Title**: a Conventional Commits subject as well. It is not checked automatically, so get it right by hand: on merge into `develop` it becomes the commit subject that the changelog keeps.
-- **Description**: follow the template. Under `## Changes`, one bullet per logical change as `**type(scope)**` — what and why; under `## Tests`, the files and cases, the `pytest` result and the coverage.
-- **Merge method**: pull requests into `develop` are squashed, so the title and description become the commit subject and body. Release and hotfix branches are merged into `main` with a merge commit, and `main` is merged back into `develop` with a merge commit, never a squash.
+- **Description**: follow the template exactly, without emojis. Under `## Changes`, one bullet per commit, in commit order, as `**type(scope)**` — what and why; release and hotfix pull requests list every commit they bring into `main`, each ending with its pull request reference (`— what and why (#51).`). Under `## Tests`, `**Files**:` with one sub-bullet per modified test file and what its cases cover (`- **Files**: none.` when no test changed), then the `pytest` result and the coverage (`97%`), each on its own line. Every list item ends with a period, except `**Files**:` when it introduces its sub-list; headings never do.
+- **Merge method**: pull requests into `develop` are squashed: the title becomes the commit subject, which git-cliff turns into the changelog line, and GitHub fills the body with the list of the branch's commits. Release and hotfix branches are merged into `main` with a merge commit, and `main` is merged back into `develop` with a merge commit, never a squash.
 
 ## Code layout
 
