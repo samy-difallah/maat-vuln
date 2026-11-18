@@ -2,6 +2,29 @@
 
 All notable changes to this project are documented in this file.
 
+## 0.3.0 - 2026-11-18
+
+### Features
+
+- **cli**: Add the -V/--version global option (#51)
+- **cli**: Add the -q/--quiet and -v/--verbose options to maat rank (#52)
+- **cli**: Add the --cache-dir global option (#53)
+- **cli**: Add the maat snapshot list command (#54)
+- **cli**: Add the maat snapshot prune and rm commands (#55)
+- **cli**: Add the stale snapshot warning and --max-age option (#56)
+- **cli**: Add the maat formats command (#57)
+- **cli**: Add the --min-priority and --top options to maat rank (#58)
+- **cli**: Add the maat.toml config file (#59)
+
+### Documentation
+
+- **design**: Specify the v0.3 command line additions (#50)
+- **roadmap**: Move VEX support before outputs and CI (#60)
+
+### Miscellaneous
+
+- **github**: Make the pull request template stricter (#61)
+
 ## 0.2.0 - 2026-11-08
 
 ### Features

@@ -21,6 +21,7 @@ maat rank CVE-2021-44228 CVE-2023-4863
 maat rank < ids.txt
 maat rank --input findings.json --format json
 maat rank --input trivy.json --input osv-scanner.json
+maat rank --input trivy.json --min-priority HIGH --top 20
 ```
 
 IDs are given as arguments, one per line on stdin, or as a JSON document with `--input` (`-` for stdin). Aliases such as GHSA IDs are accepted; when a CVE alias exists, it becomes the pivot ID. A JSON document can also carry the component and CVSS values supplied by a scanner:
@@ -38,7 +39,9 @@ IDs are given as arguments, one per line on stdin, or as a JSON document with `-
 }
 ```
 
-`--input` also reads the JSON output of SCA tools: CycloneDX BOMs and VDRs (including Dependency-Track exports), Trivy, Grype (`-o json`) and OSV-Scanner. The format is detected from the document's structure. `--input` can be repeated to combine documents in any formats (`-` at most once): findings of the same vulnerability and component are merged, and each decision lists the tools that reported it. CVSS values reported by the tools are used; their severity labels are ignored. The [examples](https://github.com/samy-difallah/maat-vuln/tree/main/docs/examples) hold real outputs of each tool to try it on.
+`--input` also reads the JSON output of SCA tools: CycloneDX BOMs and VDRs (including Dependency-Track exports), Trivy, Grype (`-o json`) and OSV-Scanner. The format is detected from the document's structure. `--input` can be repeated to combine documents in any formats (`-` at most once): findings of the same vulnerability and component are merged, and each decision lists the tools that reported it. CVSS values reported by the tools are used; their severity labels are ignored. The [examples](https://github.com/samy-difallah/maat-vuln/tree/main/docs/examples) hold real outputs of each tool to try it on. `maat formats` lists the formats installed.
+
+`--min-priority CRITICAL|HIGH|MEDIUM|LOW` keeps the decisions of that priority or above, and `--top N` the first N of them; the summary still counts every decision. `-q/--quiet` prints nothing, so only the exit code tells how the run went, and `-v/--verbose` prints every processing step on stderr.
 
 Explain the priority of one vulnerability, with the rule that matched and every signal used:
 
@@ -46,14 +49,25 @@ Explain the priority of one vulnerability, with the rule that matched and every 
 maat explain CVE-2021-44228
 ```
 
-Feeds are stored in snapshots in the user cache. The first command fetches one; later commands reuse the latest one unless given `--refresh` or `--snapshot ID`, so a report can be reproduced against the snapshot it names:
+Feeds are stored in snapshots in the user cache, or in the directory given by `--cache-dir DIR`. The first command fetches one; later commands reuse the latest one unless given `--refresh` or `--snapshot ID`, so a report can be reproduced against the snapshot it names. A warning tells when the latest snapshot is more than 24 hours old; `--max-age HOURS` fetches a new one when the latest is older than that:
 
 ```sh
 maat snapshot fetch
 maat snapshot show
+maat snapshot list
+maat snapshot prune --keep 5
+maat snapshot rm ID
 ```
 
-Every command accepts `--help`. JSON output follows the schemas in [schemas/](https://github.com/samy-difallah/maat-vuln/tree/main/schemas).
+Defaults can be set in a `maat.toml` file, read from the current directory or given with `--config FILE`, with the keys `cache_dir`, `concurrency`, `max_age`, `stale_after` (the age of the warning, in hours), `format` and `min_priority`. Every key that has a flag can also be set as a `MAAT_*` environment variable (`MAAT_CACHE_DIR`, `MAAT_FORMAT`…). A flag wins over its variable, which wins over the file:
+
+```toml
+cache_dir = ".maat-cache"
+max_age = 12
+min_priority = "HIGH"
+```
+
+`maat -V` prints the version. Every command accepts `--help`. JSON output follows the schemas in [schemas/](https://github.com/samy-difallah/maat-vuln/tree/main/schemas).
 
 ### Python library
 
@@ -88,7 +102,7 @@ Missing data never lowers a priority: it adds a flag such as `cvss_missing` or `
 
 - **v0.1** (released): reproducible core. CRITICAL to LOW verdicts from KEV, EPSS and CVSS with an explanation for each, dated and hashed feed snapshots, table and JSON output, CLI and Python library.
 - **v0.2** (released): SCA inputs. CycloneDX (including VDR), Trivy, Grype and OSV-Scanner, with multi-source merge and provenance.
-- **v0.3** (planned): command line. Version, quiet and verbose modes, a cache directory, a config file and environment variables, snapshot freshness checks and housekeeping, a list of input formats, and filters on `rank` output.
+- **v0.3** (released): command line. Version, quiet and verbose modes, a cache directory, a config file and environment variables, snapshot freshness checks and housekeeping, a list of input formats, and filters on `rank` output.
 - **v0.4** (planned): VEX. CycloneDX VEX, OpenVEX and CSAF VEX statements to suppress findings that do not affect a product.
 - **Later**: outputs and CI (v0.5) and policies as code (v0.6).
 
