@@ -72,7 +72,22 @@ not_in_nav: |
   /examples/project/
 
 nav:
-  - Examples: examples/README.md
+  - Home: index.md
+  - Getting started: getting-started.md
+  - Concepts:
+      - Priorities and policy: concepts/policy.md
+      - Signals and identifiers: concepts/signals.md
+      - Snapshots: concepts/snapshots.md
+  - Guides:
+      - Inputs: guides/inputs.md
+      - SCA tools: guides/sca-tools.md
+      - Configuration: guides/configuration.md
+      - Python library: guides/library.md
+      - Examples: examples/README.md
+  - Reference:
+      - Command line: reference/cli.md
+      - JSON output: reference/json.md
+      - Python API: reference/api.md
   - Project:
       - Design document: design.md
       - Changelog: changelog.md
