@@ -16,7 +16,7 @@ pip install -e ".[dev]"
 pre-commit install --hook-type pre-commit --hook-type commit-msg
 ```
 
-The `dev` extra aggregates `test`, `lint` and `release`; install one of them alone (`.[test]`, `.[lint]` or `.[release]`) for a narrower environment. The pre-commit hooks run the tools from the virtual environment, so activate it before committing.
+The `dev` extra aggregates `test`, `lint`, `release` and `docs`; install one of them alone (`.[test]`, `.[lint]`, `.[release]` or `.[docs]`) for a narrower environment. The pre-commit hooks run the tools from the virtual environment, so activate it before committing.
 
 ## Checks
 
@@ -84,6 +84,13 @@ The ruff configuration in `pyproject.toml` is authoritative. Rules are never dis
 Markdown files use one line per paragraph or list item (no hard wrapping), exactly one blank line between blocks and sentence-case headings. Text after a `**Label**:` continues in lowercase unless it starts with a proper noun.
 
 Links in `README.md` are absolute URLs to the `main` branch, because the README is also the PyPI project page. Unreleased features are never documented as available; the README roadmap may announce them as planned.
+
+The [documentation site](https://maat-vuln.readthedocs.io/) is built with MkDocs, Material and mkdocstrings from `docs/`. Read the Docs serves the latest release by default and builds a preview of every pull request. A change that users can see updates the matching pages in the same pull request. Check the site before pushing, and preview it while writing:
+
+```sh
+mkdocs build --strict
+mkdocs serve
+```
 
 ## Releases
 
