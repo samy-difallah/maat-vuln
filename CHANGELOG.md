@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented in this file.
 
+## 0.3.1 - 2026-11-19
+
+### Documentation
+
+- **site**: Add the documentation site on Read the Docs (#64)
+
 ## 0.3.0 - 2026-11-18
 
 ### Features
