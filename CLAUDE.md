@@ -17,7 +17,7 @@ The design (data contract, default policy, roadmap) is the reference for every d
 - Package manager: pip + venv.
 - No `requirements*.txt` — `pyproject.toml` is the single source of truth for dependencies. Never add a parallel requirements file.
 - Setup: `python3 -m venv .venv && . .venv/bin/activate`
-- Install: `pip install -e ".[dev]"` (aggregates `test` + `lint` + `release` groups; use `.[test]`, `.[lint]` or `.[release]` alone for a narrower install).
+- Install: `pip install -e ".[dev]"` (aggregates `test` + `lint` + `release` + `docs` groups; use `.[test]`, `.[lint]`, `.[release]` or `.[docs]` alone for a narrower install).
 - Runtime stack: Pydantic v2 (single source of truth for the data contract), Typer (CLI), Rich (tables), httpx (HTTP), platformdirs (cache location). Test stack: pytest, pytest-cov, pytest-asyncio, respx.
 
 ## Layout
@@ -93,6 +93,8 @@ Enforced by ruff `ANN` rules — never disabled to make code pass.
 - Links in `README.md` are absolute URLs to the `main` branch (`blob/main/` for files, `tree/main/` for directories): it is also the PyPI project page.
 - Never document an unreleased feature as available. The roadmap section of the README may announce planned versions as planned.
 - Do not mention other projects as consumers of Maat in public documentation.
+- The documentation site (https://maat-vuln.readthedocs.io/) is built by MkDocs with Material and mkdocstrings from `docs/` (`mkdocs.yml`, `.readthedocs.yaml`). Read the Docs serves `stable`, the latest release tag, so the site only shows released features. Check it with `mkdocs build --strict` (Read the Docs builds it strictly, and on every pull request) and preview it with `mkdocs serve`.
+- A change that users can see updates the matching pages of the site in the same pull request. `CHANGELOG.md` is included in the site as it is, never copied.
 
 ## CI
 

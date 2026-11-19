@@ -46,7 +46,13 @@ release = [
     "git-cliff>=2.14",
     "build>=1.6",
 ]
-dev = ["maat-vuln[test,lint,release]"]
+# MkDocs 2 drops plugins and the YAML config: stay on 1.x.
+docs = [
+    "mkdocs>=1.6.1,<2",
+    "mkdocs-material>=9.8",
+    "mkdocstrings[python]>=1.0",
+]
+dev = ["maat-vuln[test,lint,release,docs]"]
 
 [project.scripts]
 maat = "maat_vuln.cli:app"
@@ -59,6 +65,7 @@ osv-scanner = "maat_vuln.adapters.osv_scanner:ADAPTER"
 trivy = "maat_vuln.adapters.trivy:ADAPTER"
 
 [project.urls]
+Documentation = "https://maat-vuln.readthedocs.io/"
 Repository = "https://github.com/samy-difallah/maat-vuln"
 Issues = "https://github.com/samy-difallah/maat-vuln/issues"
 
