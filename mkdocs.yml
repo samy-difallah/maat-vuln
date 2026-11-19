@@ -8,8 +8,8 @@ copyright: Apache-2.0
 
 theme:
   name: material
-  logo: assets/maat.svg
-  favicon: assets/maat.svg
+  logo: assets/feather.svg
+  favicon: assets/feather.svg
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
