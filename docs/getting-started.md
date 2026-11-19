@@ -12,7 +12,7 @@ This installs the `maat` command and the `maat_vuln` Python package. Check the i
 
 ```console
 $ maat -V
-maat-vuln 0.3.0
+maat-vuln 0.3.1
 ```
 
 ## Rank vulnerabilities

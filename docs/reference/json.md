@@ -15,7 +15,7 @@ General rules:
 {
   "schema_version": "0.4.0",
   "generated_at": "2026-11-19T20:58:30.596492Z",
-  "maat_version": "0.3.0",
+  "maat_version": "0.3.1",
   "policy": {"id": "maat-default", "version": 1},
   "snapshot_id": "806c87fc259d5cad70b977820d298c26847346dcc6a0819a6de56794a19f9979",
   "decisions": [],
