@@ -4,7 +4,7 @@ Real outputs of supported SCA tools, and a native findings document, to try `maa
 
 ## Scanned project
 
-[project/](project) is a deliberately vulnerable project: a Gradle lockfile with 11 old Maven packages (Log4j, Struts, Spring, XStream…), a Go module with 5 old dependencies and a Poetry lockfile with 2 old Python packages (aiohttp, Pillow). It only holds lockfiles, so every tool sees the same packages without resolving anything.
+[project/](https://github.com/samy-difallah/maat-vuln/tree/main/docs/examples/project) is a deliberately vulnerable project: a Gradle lockfile with 11 old Maven packages (Log4j, Struts, Spring, XStream…), a Go module with 5 old dependencies and a Poetry lockfile with 2 old Python packages (aiohttp, Pillow). It only holds lockfiles, so every tool sees the same packages without resolving anything.
 
 ## Files
 
