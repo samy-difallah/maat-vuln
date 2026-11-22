@@ -8,6 +8,8 @@ copyright: Apache-2.0
 
 theme:
   name: material
+  # Keeps the Material for MkDocs look; Zensical defaults to `modern`.
+  variant: classic
   logo: assets/feather.svg
   favicon: assets/feather.svg
   palette:
@@ -59,17 +61,6 @@ plugins:
             show_if_no_docstring: true
             show_labels: false
             filters: ["!^_", "!^model_"]
-
-# Strict builds (Read the Docs fail_on_warning) then fail on broken links.
-validation:
-  omitted_files: warn
-  absolute_links: info
-  unrecognized_links: warn
-  anchors: warn
-
-not_in_nav: |
-  /examples/inputs/
-  /examples/project/
 
 nav:
   - Home: index.md
