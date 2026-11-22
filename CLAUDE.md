@@ -93,7 +93,7 @@ Enforced by ruff `ANN` rules — never disabled to make code pass.
 - Links in `README.md` are absolute URLs to the `main` branch (`blob/main/` for files, `tree/main/` for directories): it is also the PyPI project page.
 - Never document an unreleased feature as available. The roadmap section of the README may announce planned versions as planned.
 - Do not mention other projects as consumers of Maat in public documentation.
-- The documentation site (https://maat-vuln.readthedocs.io/) is built by MkDocs with Material and mkdocstrings from `docs/` (`mkdocs.yml`, `.readthedocs.yaml`). Read the Docs serves `stable`, the latest release tag, so the site only shows released features. Check it with `mkdocs build --strict` (Read the Docs builds it strictly, and on every pull request) and preview it with `mkdocs serve`.
+- The documentation site (https://maat-vuln.readthedocs.io/) is built by Zensical (classic variant, the Material for MkDocs look) and mkdocstrings from `docs/` (`mkdocs.yml`, `.readthedocs.yaml`). Read the Docs serves `stable`, the latest release tag, so the site only shows released features. Check it with `zensical build --strict` (Read the Docs builds it strictly, and on every pull request) and preview it with `zensical serve`.
 - A change that users can see updates the matching pages of the site in the same pull request. `CHANGELOG.md` is included in the site as it is, never copied.
 
 ## CI

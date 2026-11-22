@@ -46,10 +46,8 @@ release = [
     "git-cliff>=2.14",
     "build>=1.6",
 ]
-# MkDocs 2 drops plugins and the YAML config: stay on 1.x.
 docs = [
-    "mkdocs>=1.6.1,<2",
-    "mkdocs-material>=9.8",
+    "zensical>=0.1.3",
     "mkdocstrings[python]>=1.0",
 ]
 dev = ["maat-vuln[test,lint,release,docs]"]

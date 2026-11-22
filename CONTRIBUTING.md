@@ -85,11 +85,11 @@ Markdown files use one line per paragraph or list item (no hard wrapping), exact
 
 Links in `README.md` are absolute URLs to the `main` branch, because the README is also the PyPI project page. Unreleased features are never documented as available; the README roadmap may announce them as planned.
 
-The [documentation site](https://maat-vuln.readthedocs.io/) is built with MkDocs, Material and mkdocstrings from `docs/`. Read the Docs serves the latest release by default and builds a preview of every pull request. A change that users can see updates the matching pages in the same pull request. Check the site before pushing, and preview it while writing:
+The [documentation site](https://maat-vuln.readthedocs.io/) is built with Zensical and mkdocstrings from `docs/`. Read the Docs serves the latest release by default and builds a preview of every pull request. A change that users can see updates the matching pages in the same pull request. Check the site before pushing, and preview it while writing:
 
 ```sh
-mkdocs build --strict
-mkdocs serve
+zensical build --strict
+zensical serve
 ```
 
 ## Releases
