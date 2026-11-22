@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented in this file.
 
+## 0.3.3 - 2026-11-22
+
+### Build
+
+- **docs**: Build the site with Zensical instead of MkDocs (#70)
+
 ## 0.3.2 - 2026-11-19
 
 ### Documentation
