@@ -230,6 +230,7 @@ sort_commits = "oldest"
 # The HTML comments only fix the section order; striptags drops them.
 commit_parsers = [
     { message = "^chore\\(release\\)", skip = true },
+    { message = "^ci\\(deps\\)", skip = true },
     { message = "^feat", group = "<!-- 00 -->Features" },
     { message = "^fix", group = "<!-- 01 -->Bug fixes" },
     { message = "^perf", group = "<!-- 02 -->Performance" },
