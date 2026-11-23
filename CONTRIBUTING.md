@@ -2,6 +2,12 @@
 
 Thanks for your interest in Maat. This guide covers the conventions every change follows. The design document, [docs/design.md](docs/design.md), is the reference for every decision: read it before proposing a feature.
 
+Everyone taking part in the project follows the [code of conduct](CODE_OF_CONDUCT.md).
+
+## Issues
+
+Report bugs and propose features through the [issue forms](https://github.com/samy-difallah/maat-vuln/issues/new/choose). Security vulnerabilities are reported privately, as described in [SECURITY.md](SECURITY.md), never in a public issue.
+
 ## Scope
 
 Work happens one roadmap milestone at a time: the current milestone is the first one in the design document that has no release yet. Features of later milestones are not accepted ahead of time. When the design document is silent or ambiguous, open an issue to discuss it before writing code.
