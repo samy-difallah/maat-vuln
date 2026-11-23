@@ -1,0 +1,23 @@
+# Actions: version updates, grouped. pip: security updates only, since users'
+# installs pick the versions; a fix raises a minimum in pyproject.toml.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: ci
+      include: scope
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: monthly
+    # 0 turns version updates off; security updates still use this entry.
+    open-pull-requests-limit: 0
+    commit-message:
+      prefix: fix
+      include: scope
