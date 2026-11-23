@@ -1,0 +1,62 @@
+name: Bug report
+description: Report a wrong result, a crash or an error message.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: >-
+        Security vulnerabilities are not reported here: follow
+        [SECURITY.md](https://github.com/samy-difallah/maat-vuln/blob/main/SECURITY.md).
+        Remove anything confidential from the input and output you paste.
+  - type: input
+    id: version
+    attributes:
+      label: Maat version
+      description: The output of `maat -V`.
+      placeholder: maat-vuln 0.3.3
+    validations:
+      required: true
+  - type: input
+    id: python
+    attributes:
+      label: Python version
+      description: The output of `python --version`.
+      placeholder: Python 3.12.7
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: Command
+      description: The command or library call that shows the problem.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: input
+    attributes:
+      label: Input
+      description: >-
+        The smallest input that reproduces it: vulnerability IDs, or a trimmed
+        JSON document.
+  - type: input
+    id: snapshot
+    attributes:
+      label: Snapshot ID
+      description: >-
+        From `maat snapshot show`, so the result can be reproduced against the
+        same feeds.
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What you expected, and why (a rule of the default policy, a section of the design document).
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What happened instead, with the full output or traceback.
+    validations:
+      required: true
