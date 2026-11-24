@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
-authors = [{ name = "Samy DIFALLAH", email = "samy.dflh@gmail.com" }]
+authors = [{ name = "Samy DIFALLAH", email = "samy-difallah@outlook.com" }]
 keywords = ["vulnerability", "prioritization", "kev", "epss", "cvss", "psirt"]
 classifiers = [
     "Development Status :: 2 - Pre-Alpha",

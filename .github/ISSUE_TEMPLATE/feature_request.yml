@@ -1,0 +1,25 @@
+name: Feature request
+description: Propose a feature or a change of behavior.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: >-
+        Maat follows the roadmap of its
+        [design document](https://github.com/samy-difallah/maat-vuln/blob/main/docs/design.md):
+        a feature of a later milestone is discussed now but implemented with
+        its milestone.
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Use case
+      description: What you are trying to do, and what stops you today.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: >-
+        How Maat could support it, and which section of the design document or
+        roadmap milestone it touches, if any.
