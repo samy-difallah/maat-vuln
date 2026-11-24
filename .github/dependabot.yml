@@ -21,3 +21,26 @@ updates:
     commit-message:
       prefix: fix
       include: scope
+  # docs/examples/project is vulnerable on purpose: its scans are committed
+  # in docs/examples/inputs/, so its dependencies must never be bumped.
+  - package-ecosystem: pip
+    directory: /docs/examples/project
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 0
+    ignore:
+      - dependency-name: "*"
+  - package-ecosystem: gomod
+    directory: /docs/examples/project
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 0
+    ignore:
+      - dependency-name: "*"
+  - package-ecosystem: gradle
+    directory: /docs/examples/project
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 0
+    ignore:
+      - dependency-name: "*"
