@@ -72,7 +72,7 @@ Enforced by ruff `ANN` rules — never disabled to make code pass.
 - Conventional Commits for commit messages and pull request titles: `^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-z0-9._/-]+\))?!?: .{1,100}`. Commit messages are checked locally by the pre-commit `commit-msg` hook; PR titles are not checked automatically, so get them right by hand.
 - Branch names: `^(feature|fix|hotfix|release|docs|chore|refactor|test|ci|build|perf|style)/[a-z0-9]+(?:[-.][a-z0-9]+)*$`
 - Group commits by unit of meaning, not by file — never one giant commit, never one commit per file.
-- `develop` is the default branch; `main` holds the latest stable release only. Both are protected by repository rulesets: PR required, no direct or force push, no deletion, `lint` and `test` checks required.
+- `develop` is the default branch; `main` holds the latest stable release only. Both are protected by repository rulesets: PR required, no direct or force push, no deletion, `lint` and `test` checks required. The `develop` ruleset also requires CodeQL code scanning results: a pull request cannot merge before the analysis has run on it, nor if it brings new alerts at the `error` level or new security alerts at `high` or above. `main` does not require them yet: CodeQL has not been seen running on a pull request into it.
 - All other branches are ephemeral: force pushes are blocked everywhere (no `push --force` after a rebase or an amend), and head branches are deleted automatically once their PR is merged.
 - Merge methods (rebase merging is disabled):
   - ephemeral branch → `develop`: **squash**. The PR title becomes the commit subject, which git-cliff turns into the changelog line; GitHub fills the body with the list of the branch's commits.
@@ -102,6 +102,8 @@ Enforced by ruff `ANN` rules — never disabled to make code pass.
 `.github/workflows/ci.yml` runs on `push`/`pull_request` to `main`/`develop` only: a `lint` job (`ruff check` + `ruff format --check` + `lint-imports` + schema drift check) on Python 3.12 and a `test-matrix` job (`pytest`) on Python 3.12, 3.13 and 3.14, summed up by a `test` job. Each installs only its own dependency group (`.[lint]` or `.[test]`), not `.[dev]`.
 
 The rulesets require the `lint` and `test` checks by name: never rename these jobs.
+
+Code scanning uses CodeQL default setup (Python and GitHub Actions), configured in the repository settings: there is no workflow file for it, and none should be added, since default setup blocks advanced-setup uploads.
 
 `.github/workflows/publish.yml` publishes through PyPI trusted publishing (OIDC, no token): a push to `release/**` publishes a `X.Y.Z.devN` rehearsal to TestPyPI (environment `testpypi`); a `vX.Y.Z` tag checks it matches `pyproject.toml`, publishes to PyPI (environment `pypi`) and creates the GitHub release with the version's `CHANGELOG.md` section as notes.
 
