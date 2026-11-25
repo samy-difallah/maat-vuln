@@ -2,6 +2,19 @@
 
 All notable changes to this project are documented in this file.
 
+## 0.3.4 - 2026-11-25
+
+### Documentation
+
+- Add a security policy, issue forms and a code of conduct (#74)
+- **contributing**: Document the CodeQL code scanning requirement on develop (#79)
+- **contributing**: Document the CodeQL rule on main and the Dependabot auto-triage rule (#81)
+
+### CI
+
+- Add Dependabot for GitHub Actions and pip security updates (#73)
+- **dependabot**: Exclude the example project from Dependabot (#80)
+
 ## 0.3.3 - 2026-11-22
 
 ### Build
