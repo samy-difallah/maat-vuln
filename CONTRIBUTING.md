@@ -42,7 +42,7 @@ The JSON Schemas in `schemas/` are generated from the Pydantic models and commit
 
 ## Branches
 
-`develop` is the default branch; `main` holds the latest stable release only. Both are protected: changes go through a pull request with the `lint` and `test` checks passing. Pull requests into `develop` also wait for the CodeQL code scanning analysis, which GitHub runs on every push to them, and cannot merge if it finds new errors or new security alerts of high severity or above.
+`develop` is the default branch; `main` holds the latest stable release only. Both are protected: changes go through a pull request with the `lint` and `test` checks passing. Pull requests also wait for the CodeQL code scanning analysis, which GitHub runs on every push to them, and cannot merge if it finds new errors or new security alerts of high severity or above.
 
 Branch names follow `^(feature|fix|hotfix|release|docs|chore|refactor|test|ci|build|perf|style)/[a-z0-9]+(?:[-.][a-z0-9]+)*$`, for example `feature/kev-client` or `fix/epss-date-parsing`. Branches are deleted automatically once merged.
 
