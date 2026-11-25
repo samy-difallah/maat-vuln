@@ -2,6 +2,12 @@
 
 Thanks for your interest in Maat. This guide covers the conventions every change follows. The design document, [docs/design.md](docs/design.md), is the reference for every decision: read it before proposing a feature.
 
+Everyone taking part in the project follows the [code of conduct](CODE_OF_CONDUCT.md).
+
+## Issues
+
+Report bugs and propose features through the [issue forms](https://github.com/samy-difallah/maat-vuln/issues/new/choose). Security vulnerabilities are reported privately, as described in [SECURITY.md](SECURITY.md), never in a public issue.
+
 ## Scope
 
 Work happens one roadmap milestone at a time: the current milestone is the first one in the design document that has no release yet. Features of later milestones are not accepted ahead of time. When the design document is silent or ambiguous, open an issue to discuss it before writing code.
@@ -36,7 +42,7 @@ The JSON Schemas in `schemas/` are generated from the Pydantic models and commit
 
 ## Branches
 
-`develop` is the default branch; `main` holds the latest stable release only. Both are protected: changes go through a pull request with the `lint` and `test` checks passing.
+`develop` is the default branch; `main` holds the latest stable release only. Both are protected: changes go through a pull request with the `lint` and `test` checks passing. Pull requests into `develop` also wait for the CodeQL code scanning analysis, which GitHub runs on every push to them, and cannot merge if it finds new errors or new security alerts of high severity or above.
 
 Branch names follow `^(feature|fix|hotfix|release|docs|chore|refactor|test|ci|build|perf|style)/[a-z0-9]+(?:[-.][a-z0-9]+)*$`, for example `feature/kev-client` or `fix/epss-date-parsing`. Branches are deleted automatically once merged.
 
@@ -53,6 +59,7 @@ Group commits by unit of meaning, not by file: neither one giant commit nor one 
 - **Title**: a Conventional Commits subject as well. It is not checked automatically, so get it right by hand: on merge into `develop` it becomes the commit subject that the changelog keeps.
 - **Description**: follow the template exactly, without emojis. Under `## Changes`, one bullet per commit, in commit order, as `**type(scope)**` — what and why; release and hotfix pull requests list every commit they bring into `main`, each ending with its pull request reference (`— what and why (#51).`). Under `## Tests`, `**Files**:` with one sub-bullet per modified test file and what its cases cover (`- **Files**: none.` when no test changed), then the `pytest` result and the coverage (`97%`), each on its own line. Every list item ends with a period, except `**Files**:` when it introduces its sub-list; headings never do.
 - **Merge method**: pull requests into `develop` are squashed: the title becomes the commit subject, which git-cliff turns into the changelog line, and GitHub fills the body with the list of the branch's commits. Release and hotfix branches are merged into `main` with a merge commit, and `main` is merged back into `develop` with a merge commit, never a squash.
+- **Dependabot**: it opens a monthly `ci(deps)` pull request for GitHub Actions, left out of the changelog, and a `fix(deps)` pull request when a security advisory affects a dependency, which raises its minimum version in `pyproject.toml`. It leaves the example project of `docs/examples/project` alone: that project is vulnerable on purpose, and its scans are committed. A repository auto-triage rule dismisses the alerts of its manifests, so a manifest added to that project must also be added to the rule by a maintainer. Dependabot's branch names and descriptions are its own: they are exempt from the conventions above, but its titles follow Conventional Commits.
 
 ## Code layout
 
