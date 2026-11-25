@@ -83,3 +83,4 @@ nav:
       - Design document: design.md
       - Changelog: changelog.md
       - Contributing: https://github.com/samy-difallah/maat-vuln/blob/main/CONTRIBUTING.md
+      - Security policy: https://github.com/samy-difallah/maat-vuln/blob/main/SECURITY.md

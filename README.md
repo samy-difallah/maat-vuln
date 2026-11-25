@@ -110,7 +110,7 @@ Missing data never lowers a priority: it adds a flag such as `cvss_missing` or `
 
 ## Contributing
 
-See [CONTRIBUTING.md](https://github.com/samy-difallah/maat-vuln/blob/main/CONTRIBUTING.md).
+See [CONTRIBUTING.md](https://github.com/samy-difallah/maat-vuln/blob/main/CONTRIBUTING.md). Report security vulnerabilities privately, as described in [SECURITY.md](https://github.com/samy-difallah/maat-vuln/blob/main/SECURITY.md), never in a public issue.
 
 ## License
 
